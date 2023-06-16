@@ -1,6 +1,6 @@
 # Skatliste
 
-Experimental Android app to capture images of handwritten tournament skat lists and check them for errors. One goal is to use only C/C++ without any Java code. Another goal is to use only simple and bloat-free external libraries which can be easily included and built with the project.
+Development of an Android app to capture images of handwritten tournament Skat lists and check them for errors. One goal is to use only C/C++ without any Java code. Another goal is to use only simple and bloat-free external libraries which can be easily included and built with the project.
 
 ## Dependencies
 
