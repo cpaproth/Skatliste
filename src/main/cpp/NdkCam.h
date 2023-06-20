@@ -3,12 +3,14 @@
 #include <camera/NdkCameraManager.h>
 #include <media/NdkImageReader.h>
 #include <vector>
+#include <mutex>
 
 class NdkCam {
     int32_t width;
     int32_t height;
     std::vector<uint8_t> rgba;
     std::vector<uint8_t> lum;
+    std::mutex mut;
 
     ACameraManager* manager = 0;
     ACameraIdList* idlist = 0;
@@ -26,5 +28,11 @@ class NdkCam {
 public:
     NdkCam(int32_t, int32_t, size_t);
     ~NdkCam();
-    uint32_t* rgbadata() {return (uint32_t*)rgba.data();}
+
+    int32_t w() {return width;}
+    int32_t h() {return height;}
+    unsigned get_rgba(std::function<unsigned(uint32_t*, int, int)> f) {
+        std::lock_guard<std::mutex> lg(mut);
+        return f((uint32_t*)rgba.data(), width, height);
+    }
 };

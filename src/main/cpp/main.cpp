@@ -44,7 +44,7 @@ void HandleKey( int keycode, int bDown ) {
 }
 void HandleButton( int x, int y, int button, int bDown ) {
     cout << x << " " << y << " " << button << " " << bDown << endl;
-    if (x > 100 && x < 200 && y > 100 && y < 200)
+    if (x < 200 && y < 200)
         AndroidDisplayKeyboard(!bDown);
 }
 void HandleMotion( int x, int y, int mask ) {
@@ -76,11 +76,12 @@ int main(int, char**) {
         short w, h;
         CNFGGetDimensions(&w, &h);
 
-        unsigned tex = CNFGTexImage(cam.rgbadata(), 640, 480);
-        CNFGBlitTex(tex, 0, 0, w, h);
+        unsigned tex = cam.get_rgba(CNFGTexImage);
+        if (w * cam.h() < h * cam.w())
+            CNFGBlitTex(tex, 0, 0, w, cam.h() * w / cam.w());
+        else
+            CNFGBlitTex(tex, 0, 0, cam.w() * h / cam.h(), h);
         CNFGDeleteTex(tex);
-        //CNFGBlitImage((uint32_t*)mem.data(), 100, 100, 640, 480);
-
 
         CNFGColor(0xffffffff);
         CNFGPenX = 20;

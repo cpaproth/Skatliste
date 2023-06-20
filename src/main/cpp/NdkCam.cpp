@@ -74,22 +74,38 @@ void NdkCam::printprops(const char* id) {
 
 void NdkCam::onimage(void* context, AImageReader* reader) {
     NdkCam* cam = (NdkCam*)context;
-    AImage *image = 0;
-    AImageReader_acquireLatestImage(reader, &image);
-    uint8_t *data = 0;
-    int len = 0;
-    AImage_getPlaneData(image, 0, &data, &len);
 
-    int32_t w,h;
+    AImage* image = 0;
+    AImageReader_acquireLatestImage(reader, &image);
+
+    uint8_t *Y = 0, *U = 0, *V = 0;
+    int lY = 0, lU = 0, lV = 0;
+    AImage_getPlaneData(image, 0, &Y, &lY);
+    AImage_getPlaneData(image, 1, &U, &lU);
+    AImage_getPlaneData(image, 2, &V, &lV);
+
+    int32_t w, h, psU, psV, rsU, rsV;
     AImage_getWidth(image, &w);
     AImage_getHeight(image, &h);
-    //cout<<w<<" x "<<h<<endl;
+    AImage_getPlanePixelStride(image, 1, &psU);
+    AImage_getPlanePixelStride(image, 2, &psV);
+    AImage_getPlaneRowStride(image, 1, &rsU);
+    AImage_getPlaneRowStride(image, 2, &rsV);
 
-    for (unsigned i = 0; i < 640 * 480 && i < len; i++) {
-        cam->rgba[4 * i] = 255;
-        cam->rgba[4 * i + 1] = data[i];
-        cam->rgba[4 * i + 2] = data[i];
-        cam->rgba[4 * i + 3] = data[i];
+    lock_guard<mutex> lg(cam->mut);
+    for (unsigned y = 0; y < cam->height; y++) {
+        for (unsigned x = 0; x < cam->width; x++) {
+            size_t pos = 4 * (y * cam->width + x);
+            size_t posY = (h - x - 1) * w + y;
+            size_t posU = ((h - x - 1) >> 1) * rsU + (y >> 1) * psU;
+            size_t posV = ((h - x - 1) >> 1) * rsV + (y >> 1) * psV;
+            if (posY < lY && posU < lU && posV < lV) {
+                cam->lum[pos >> 2] = Y[posY];
+                cam->rgba[pos + 1] = max(0, min(Y[posY] + U[posU] - 128, 255));
+                cam->rgba[pos + 2] = max(0, min(Y[posY] - U[posU] - V[posV] + 256, 255));
+                cam->rgba[pos + 3] = max(0, min(Y[posY] + V[posV] - 128, 255));
+            }
+        }
     }
 
     AImage_delete(image);
