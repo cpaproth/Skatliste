@@ -1,5 +1,18 @@
 //Copyright (C) 2023 Carsten Paproth - Licensed under MIT License
 
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui.h"
+#include "imgui_impl_android.h"
+#include "imgui_impl_opengl3.h"
+
+#include "imgui.cpp"
+#include "imgui_draw.cpp"
+#include "imgui_tables.cpp"
+#include "imgui_widgets.cpp"
+#include "imgui_impl_android.cpp"
+#include "imgui_impl_opengl3.cpp"
+
+
 #define CNFG_IMPLEMENTATION
 #include "rawdraw_sf.h"
 
@@ -69,6 +82,13 @@ int main(int, char**) {
 
     AndroidDisplayKeyboard(true);
 
+    ImGui::CreateContext();
+    ImGui_ImplAndroid_Init(native_window);
+    ImGui_ImplOpenGL3_Init("#version 300 es");
+    ImFontConfig font_cfg;
+    font_cfg.SizePixels = 50.0f;
+    ImGui::GetIO().Fonts->AddFontDefault(&font_cfg);
+
     while (CNFGHandleInput()) {
 
         CNFGBGColor = 0x000080ff;
@@ -88,6 +108,15 @@ int main(int, char**) {
         CNFGPenX = 20;
         CNFGPenY = 20;
         CNFGDrawText(buf.c_str(), 4);
+        CNFGFlushRender();
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplAndroid_NewFrame();
+        ImGui::NewFrame();
+        //ImGui::Text("Hello, world!");
+        ImGui::TextEx(buf.c_str());
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         CNFGSwapBuffers();
     }

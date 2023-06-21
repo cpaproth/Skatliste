@@ -4495,6 +4495,7 @@ int debuga, debugb, debugc;
 int32_t handle_input(struct android_app* app, AInputEvent* event)
 {
 #ifdef ANDROID
+	ImGui_ImplAndroid_HandleInputEvent(event);
 	//Potentially do other things here.
 
 	if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION)
