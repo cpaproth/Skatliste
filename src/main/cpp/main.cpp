@@ -1,7 +1,7 @@
 //Copyright (C) 2023 Carsten Paproth - Licensed under MIT License
 
 #define CNFG_IMPLEMENTATION
-#include "external/rawdraw_sf.h"
+#include "rawdraw_sf.h"
 
 #include "NdkCam.h"
 
@@ -62,6 +62,7 @@ int main(int, char**) {
 
     coutbuf buf;
     NdkCam cam(480, 640, 0);
+    cam.start();
 
     CNFGSetupFullscreen("Skatliste", 0);
     CNFGSetLineWidth(1);

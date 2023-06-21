@@ -12,14 +12,16 @@ NdkCam::NdkCam(int32_t w, int32_t h, size_t i) : width(w), height(h) {
     ACameraDevice_stateCallbacks deviceCallbacks{0, 0, 0};
     AImageReader_ImageListener imageCallbacks{this, onimage};
     ACameraCaptureSession_stateCallbacks sessionCallbacks{0, 0, 0, 0};
-    ACameraCaptureSession_captureCallbacks captureCallbacks{0, 0, 0, 0, 0, 0, 0, 0};
 
     manager = ACameraManager_create();
     ACameraManager_getCameraIdList(manager, &idlist);
     const char* id = i < idlist->numCameras? idlist->cameraIds[i]: "0";
     printprops(id);
     ACameraManager_openCamera(manager, id, &deviceCallbacks, &device);
-    AImageReader_new(height, width, AIMAGE_FORMAT_YUV_420_888, 1, &reader);
+    if ((rotate / 90 & 1) == 0)
+        AImageReader_new(width, height, AIMAGE_FORMAT_YUV_420_888, 1, &reader);
+    else
+        AImageReader_new(height, width, AIMAGE_FORMAT_YUV_420_888, 1, &reader);
     AImageReader_setImageListener(reader, &imageCallbacks);
     AImageReader_getWindow(reader, &window);
     ANativeWindow_acquire(window);
@@ -30,7 +32,6 @@ NdkCam::NdkCam(int32_t w, int32_t h, size_t i) : width(w), height(h) {
     ACaptureSessionOutputContainer_create(&outputs);
     ACaptureSessionOutputContainer_add(outputs, output);
     ACameraDevice_createCaptureSession(device, outputs, &sessionCallbacks, &session);
-    ACameraCaptureSession_setRepeatingRequest(session, &captureCallbacks, 1, &request, 0);
 }
 
 NdkCam::~NdkCam() {
@@ -64,7 +65,7 @@ void NdkCam::printprops(const char* id) {
             cout << "size: " << entry.data.i32[i + 1] << " x " << entry.data.i32[i + 2] << endl;
 
     if (ACameraMetadata_getConstEntry(metadata, ACAMERA_SENSOR_ORIENTATION, &entry) == ACAMERA_OK)
-        cout << "orientation: " << entry.data.i32[0] << endl;
+        cout << "orientation: " << (rotate = entry.data.i32[0]) << endl;
 
     if (ACameraMetadata_getConstEntry(metadata, ACAMERA_LENS_FACING, &entry) == ACAMERA_OK)
         cout << "backfacing: " << (int)entry.data.u8[0] << endl;
@@ -73,7 +74,7 @@ void NdkCam::printprops(const char* id) {
 }
 
 void NdkCam::onimage(void* context, AImageReader* reader) {
-    NdkCam* cam = (NdkCam*)context;
+    auto cam = (NdkCam*)context;
 
     AImage* image = 0;
     AImageReader_acquireLatestImage(reader, &image);
@@ -93,12 +94,20 @@ void NdkCam::onimage(void* context, AImageReader* reader) {
     AImage_getPlaneRowStride(image, 2, &rsV);
 
     lock_guard<mutex> lg(cam->mut);
+    int ro = cam->rotate / 90;
+    cam->width = (ro & 1) == 0? w: h;
+    cam->height = (ro & 1) == 0? h: w;
+    cam->rgba.resize(w * h * 4, 255);
+    cam->lum.resize(w * h, 255);
+
     for (unsigned y = 0; y < cam->height; y++) {
         for (unsigned x = 0; x < cam->width; x++) {
+            size_t xi = ro == 0? x: ro == 1? y: ro == 2? w - x - 1: w - y - 1;
+            size_t yi = ro == 0? y: ro == 1? h - x - 1: ro == 2? h - y - 1: x;
             size_t pos = 4 * (y * cam->width + x);
-            size_t posY = (h - x - 1) * w + y;
-            size_t posU = ((h - x - 1) >> 1) * rsU + (y >> 1) * psU;
-            size_t posV = ((h - x - 1) >> 1) * rsV + (y >> 1) * psV;
+            size_t posY = yi * w + xi;
+            size_t posU = (yi >> 1) * rsU + (xi >> 1) * psU;
+            size_t posV = (yi >> 1) * rsV + (xi >> 1) * psV;
             if (posY < lY && posU < lU && posV < lV) {
                 cam->lum[pos >> 2] = Y[posY];
                 cam->rgba[pos + 1] = max(0, min(Y[posY] + U[posU] - 128, 255));
