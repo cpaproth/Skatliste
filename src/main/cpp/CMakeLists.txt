@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.6.0)
 project(Skatliste)
 
+add_library(rawdraw STATIC external/CNFG.c external/CNFGEGLDriver.c external/CNFGFunctions.c)
+
 add_library(imgui STATIC external/imgui.cpp external/imgui_draw.cpp external/imgui_tables.cpp external/imgui_demo.cpp
         external/imgui_widgets.cpp external/imgui_impl_android.cpp external/imgui_impl_opengl3.cpp)
 

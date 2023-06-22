@@ -1,11 +1,7 @@
 //Copyright (C) 2023 Carsten Paproth - Licensed under MIT License
 
-#include "imgui.h"
-#include "imgui_impl_android.h"
-#include "imgui_impl_opengl3.h"
-
 #define CNFG_IMPLEMENTATION
-#include "rawdraw_sf.h"
+#include "CNFG.h"
 
 #include "NdkCam.h"
 
@@ -38,8 +34,6 @@ public:
     }
 };
 
-
-
 void HandleKey( int keycode, int bDown ) {
     if (bDown && keycode > 0)
         cout << (char)keycode;
@@ -55,7 +49,6 @@ void HandleMotion( int x, int y, int mask ) {
 void HandleDestroy() {}
 void HandleResume() {}
 void HandleSuspend() {}
-void HandleWindowTermination() {}
 
 int main(int, char**) {
 
@@ -66,20 +59,18 @@ int main(int, char**) {
     NdkCam cam(480, 640, 0);
 
     CNFGSetupFullscreen("Skatliste", 0);
-    CNFGSetLineWidth(1);
 
     bool capture = false;
     char text[50] = "öäüß";
 
     while (CNFGHandleInput()) {
-
-        AndroidDisplayKeyboard(ImGui::GetIO().WantTextInput);
-
-        CNFGBGColor = 0x000080ff;
-        CNFGClearFrame();
+        if (!CNFGPrepareNewFrame())
+            continue;
 
         short w, h;
         CNFGGetDimensions(&w, &h);
+        CNFGSetLineWidth(1);
+        CNFGBGColor = 0x000080ff;
 
         unsigned tex = cam.get_rgba(CNFGTexImage);
         if (w * cam.h() < h * cam.w())
@@ -92,12 +83,6 @@ int main(int, char**) {
         CNFGPenX = 20;
         CNFGPenY = 20;
         CNFGDrawText(buf.c_str(), 4);
-        CNFGFlushRender();
-
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplAndroid_NewFrame();
-        ImGui::NewFrame();
-
 
         ImGui::Text("Hello, world!");
         ImGui::InputText("Hallo", text, sizeof(text));
@@ -110,10 +95,7 @@ int main(int, char**) {
         }
         ImGui::TextUnformatted(buf.c_str());
 
-        //ImGui::ShowDemoWindow();
-
-        ImGui::Render();
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        ImGui::ShowDemoWindow();
 
         CNFGSwapBuffers();
     }
