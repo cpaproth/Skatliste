@@ -1,17 +1,8 @@
 //Copyright (C) 2023 Carsten Paproth - Licensed under MIT License
 
-#define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui.h"
 #include "imgui_impl_android.h"
 #include "imgui_impl_opengl3.h"
-
-#include "imgui.cpp"
-#include "imgui_draw.cpp"
-#include "imgui_tables.cpp"
-#include "imgui_widgets.cpp"
-#include "imgui_impl_android.cpp"
-#include "imgui_impl_opengl3.cpp"
-
 
 #define CNFG_IMPLEMENTATION
 #include "rawdraw_sf.h"
@@ -57,8 +48,6 @@ void HandleKey( int keycode, int bDown ) {
 }
 void HandleButton( int x, int y, int button, int bDown ) {
     cout << x << " " << y << " " << button << " " << bDown << endl;
-    if (x < 200 && y < 200)
-        AndroidDisplayKeyboard(!bDown);
 }
 void HandleMotion( int x, int y, int mask ) {
     cout << x << " " << y << " " << mask << endl;
@@ -75,21 +64,16 @@ int main(int, char**) {
 
     coutbuf buf;
     NdkCam cam(480, 640, 0);
-    cam.start();
 
     CNFGSetupFullscreen("Skatliste", 0);
     CNFGSetLineWidth(1);
 
-    AndroidDisplayKeyboard(true);
-
-    ImGui::CreateContext();
-    ImGui_ImplAndroid_Init(native_window);
-    ImGui_ImplOpenGL3_Init("#version 300 es");
-    ImFontConfig font_cfg;
-    font_cfg.SizePixels = 50.0f;
-    ImGui::GetIO().Fonts->AddFontDefault(&font_cfg);
+    bool capture = false;
+    char text[50] = "öäüß";
 
     while (CNFGHandleInput()) {
+
+        AndroidDisplayKeyboard(ImGui::GetIO().WantTextInput);
 
         CNFGBGColor = 0x000080ff;
         CNFGClearFrame();
@@ -113,8 +97,21 @@ int main(int, char**) {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplAndroid_NewFrame();
         ImGui::NewFrame();
-        //ImGui::Text("Hello, world!");
-        ImGui::TextEx(buf.c_str());
+
+
+        ImGui::Text("Hello, world!");
+        ImGui::InputText("Hallo", text, sizeof(text));
+        if (ImGui::Button(capture? "Stop": "Start")) {
+            if (capture)
+                cam.stop();
+            else
+                cam.start();
+            capture = !capture;
+        }
+        ImGui::TextUnformatted(buf.c_str());
+
+        //ImGui::ShowDemoWindow();
+
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

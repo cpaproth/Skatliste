@@ -4479,6 +4479,14 @@ int CNFGSetup( const char * WindowName, int w, int h )
 		CNFGGetDimensions( &dummyx, &dummyy );
 	}
 
+    ImGui::CreateContext();
+    ImGui_ImplAndroid_Init(native_window);
+    ImGui_ImplOpenGL3_Init("#version 300 es");
+    ImFontConfig font_cfg;
+    font_cfg.SizePixels = 30.0f;
+    ImGui::GetIO().Fonts->AddFontDefault(&font_cfg);
+    ImGui::GetStyle().ScaleAllSizes(3.f);
+
 	return 0;
 }
 
@@ -4534,18 +4542,16 @@ int32_t handle_input(struct android_app* app, AInputEvent* event)
 	}
 	else if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY)
 	{
-        int fl = AKeyEvent_getFlags(event);
-        int me = AKeyEvent_getMetaState(event);
-        int ac = AKeyEvent_getAction(event);
 		int code = AKeyEvent_getKeyCode(event);
 #ifdef ANDROID_USE_SCANCODES
 		HandleKey( code, AKeyEvent_getAction(event) );
 #else
 		int unicode = AndroidGetUnicodeChar( code, AMotionEvent_getMetaState( event ) );
-		if( unicode )
-            HandleKey( unicode, AKeyEvent_getAction(event) );
-		else
-		{
+		if( unicode ) {
+			HandleKey(unicode, AKeyEvent_getAction(event));
+			if (AKeyEvent_getAction(event))
+				ImGui::GetIO().AddInputCharacter(unicode);
+		} else {
 			HandleKey( -code, !AKeyEvent_getAction(event) );
 			return (code == 4)?1:0; //don't override functionality.
 		}
@@ -4624,6 +4630,10 @@ void handle_cmd(struct android_app* app, int32_t cmd)
 		//This gets called initially when you click "back"
 		//This also gets called when you are brought into standby.
 		//Not sure why - callbacks here seem to break stuff.
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplAndroid_Shutdown();
+		ImGui::DestroyContext();
+
 		if( egl_display != EGL_NO_DISPLAY ) {
 			eglMakeCurrent( egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT );
 			if( egl_context != EGL_NO_CONTEXT ) {
