@@ -378,8 +378,11 @@ int CNFGSetup( const char * WindowName, int w, int h )
 	ImGui::CreateContext();
 	ImGui_ImplAndroid_Init(native_window);
 	ImGui_ImplOpenGL3_Init("#version 300 es");
+	static char inifile[128];
+	strcat(strcpy(inifile, gapp->activity->internalDataPath), "/imgui.ini");
+	ImGui::GetIO().IniFilename = inifile;
 	ImFontConfig font_cfg;
-	font_cfg.SizePixels = 30.0f;
+	font_cfg.SizePixels = 30.f;
 	ImGui::GetIO().Fonts->AddFontDefault(&font_cfg);
 	ImGui::GetStyle().ScaleAllSizes(3.f);
 
@@ -496,7 +499,8 @@ int CNFGHandleInput()
 	}
 	XSetWMProtocols(XDisplay, XWindow, &XWMDeleteMessage, 0);
 #endif
-	return 1;
+
+	return !gapp->destroyRequested;
 }
 
 
