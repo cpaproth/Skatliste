@@ -180,11 +180,11 @@ void CNFGSwapBuffers()
 	if ( egl_display == EGL_NO_DISPLAY ) return;
 	CNFGFlushRender();
 
-    //Dear ImGui, render GUI
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	//Dear ImGui, render GUI
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    eglSwapBuffers(egl_display, egl_surface);
+	eglSwapBuffers(egl_display, egl_surface);
 #ifdef ANDROID
 	if( !override_android_screen_dimensons )
 	{
@@ -274,11 +274,11 @@ int CNFGSetup( const char * WindowName, int w, int h )
 	}
 
 	printf("EGL Version: \"%s\"\n",
-	       eglQueryString(egl_display, EGL_VERSION));
+		   eglQueryString(egl_display, EGL_VERSION));
 	printf("EGL Vendor: \"%s\"\n",
-	       eglQueryString(egl_display, EGL_VENDOR));
+		   eglQueryString(egl_display, EGL_VENDOR));
 	printf("EGL Extensions: \"%s\"\n",
-	       eglQueryString(egl_display, EGL_EXTENSIONS));
+		   eglQueryString(egl_display, EGL_EXTENSIONS));
 
 	eglChooseConfig(egl_display, config_attribute_list, &egl_config, 1,
 			&num_config);
@@ -297,7 +297,7 @@ int CNFGSetup( const char * WindowName, int w, int h )
 
 #ifdef USE_EGL_X
 	egl_surface = eglCreateWindowSurface(egl_display, egl_config, XWindow,
-					     window_attribute_list);
+						 window_attribute_list);
 #else
 
 	if( native_window && !gapp->window )
@@ -328,11 +328,11 @@ int CNFGSetup( const char * WindowName, int w, int h )
 	printf( "Width/Height: %dx%d\n", android_width, android_height );
 	egl_surface = eglCreateWindowSurface(egl_display, egl_config,
 #ifdef ANDROID
-			     gapp->window,
+				 gapp->window,
 #else
-			     (EGLNativeWindowType)&native_window,
+				 (EGLNativeWindowType)&native_window,
 #endif
-			     window_attribute_list);
+				 window_attribute_list);
 #endif
 	printf( "Got Surface: %p\n", egl_surface );
 
@@ -345,7 +345,7 @@ int CNFGSetup( const char * WindowName, int w, int h )
 #ifndef ANDROID
 	int width, height;
 	if (!eglQuerySurface(egl_display, egl_surface, EGL_WIDTH, &width) ||
-	    !eglQuerySurface(egl_display, egl_surface, EGL_HEIGHT, &height)) {
+		!eglQuerySurface(egl_display, egl_surface, EGL_HEIGHT, &height)) {
 		ERRLOG( "Error: eglQuerySurface failed: 0x%08X\n",
 			eglGetError());
 		return -1;
@@ -374,7 +374,7 @@ int CNFGSetup( const char * WindowName, int w, int h )
 		CNFGGetDimensions( &dummyx, &dummyy );
 	}
 
-    //Dear ImGui, init context
+	//Dear ImGui, init context
 	ImGui::CreateContext();
 	ImGui_ImplAndroid_Init(native_window);
 	ImGui_ImplOpenGL3_Init("#version 300 es");
@@ -401,8 +401,8 @@ int32_t handle_input(struct android_app* app, AInputEvent* event)
 #ifdef ANDROID
 	//Potentially do other things here.
 
-    //Dear ImGui, handle input
-    ImGui_ImplAndroid_HandleInputEvent(event);
+	//Dear ImGui, handle input
+	ImGui_ImplAndroid_HandleInputEvent(event);
 
 	if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_MOTION)
 	{
@@ -447,8 +447,8 @@ int32_t handle_input(struct android_app* app, AInputEvent* event)
 		int unicode = AndroidGetUnicodeChar( code, AMotionEvent_getMetaState( event ) );
 
 		//Dear ImGui, handle unicode character
-        if (unicode && AKeyEvent_getAction(event))
-            ImGui::GetIO().AddInputCharacter(unicode);
+		if (unicode && AKeyEvent_getAction(event))
+			ImGui::GetIO().AddInputCharacter(unicode);
 
 		if( unicode )
 			HandleKey( unicode, AKeyEvent_getAction(event) );
@@ -487,7 +487,7 @@ int CNFGHandleInput()
 		XNextEvent(XDisplay, &event);
 
 		if ((event.type == MotionNotify) ||
-		    (event.type == Expose))
+			(event.type == Expose))
 			Redraw(width, height);
 		else if (event.type == ClientMessage) {
 			if (event.xclient.data.l[0] == XWMDeleteMessage)
@@ -533,9 +533,9 @@ void handle_cmd(struct android_app* app, int32_t cmd)
 		//Not sure why - callbacks here seem to break stuff.
 
 		//Dear ImGui, shutdown context
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplAndroid_Shutdown();
-        ImGui::DestroyContext();
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplAndroid_Shutdown();
+		ImGui::DestroyContext();
 
 		if( egl_display != EGL_NO_DISPLAY ) {
 			eglMakeCurrent( egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT );
@@ -649,7 +649,7 @@ void AndroidMakeFullscreen()
 	jmethodID setSystemUiVisibility = env->GetMethodID( ENVCALL viewClass, "setSystemUiVisibility", "(I)V");
 	//Call the decorView.setSystemUiVisibility(FLAGS)
 	env->CallVoidMethod( ENVCALL decorView, setSystemUiVisibility,
-		        (flagLayoutHideNavigation | flagLayoutFullscreen | flagLowProfile | flagHideNavigation | flagFullscreen | flagImmersiveSticky | flagLayoutStable));
+				(flagLayoutHideNavigation | flagLayoutFullscreen | flagLowProfile | flagHideNavigation | flagFullscreen | flagImmersiveSticky | flagLayoutStable));
 
 	//now set some more flags associated with layoutmanager -- note the $ in the class path
 	//search for api-versions.xml
