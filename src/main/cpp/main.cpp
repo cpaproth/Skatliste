@@ -64,13 +64,12 @@ int main(int, char**) {
 	char text[50] = "öäüß";
 
 	while (CNFGHandleInput()) {
-		if (!CNFGPrepareNewFrame())
-			continue;
 
 		short w, h;
 		CNFGGetDimensions(&w, &h);
 		CNFGSetLineWidth(1);
 		CNFGBGColor = 0x000080ff;
+		CNFGClearFrame();
 
 		unsigned tex = cam.get_rgba(CNFGTexImage);
 		if (w * cam.h() < h * cam.w())

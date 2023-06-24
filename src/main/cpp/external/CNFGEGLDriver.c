@@ -159,20 +159,6 @@ void CNFGSetVSync( int vson )
 	eglSwapInterval(egl_display, vson);
 }
 
-//Dear ImGui, prepare next frame
-bool CNFGPrepareNewFrame() {
-	if (!ImGui::GetCurrentContext()) {
-		sleep(1);
-		return false;
-	}
-	CNFGClearFrame();
-	AndroidDisplayKeyboard(ImGui::GetIO().WantTextInput);
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplAndroid_NewFrame();
-	ImGui::NewFrame();
-	return true;
-}
-
 static short iLastInternalW, iLastInternalH;
 
 void CNFGSwapBuffers()
@@ -450,8 +436,10 @@ int32_t handle_input(struct android_app* app, AInputEvent* event)
 		int unicode = AndroidGetUnicodeChar( code, AMotionEvent_getMetaState( event ) );
 
 		//Dear ImGui, handle unicode character
+		static bool compose = false;
 		if (unicode && AKeyEvent_getAction(event))
-			ImGui::GetIO().AddInputCharacter(unicode);
+			compose = (ImGui::GetIO().AddInputCharacter(unicode + (!compose? 0: (unicode | 0x20) == 0x61? 0x83: 0x87)), false);
+		compose |= !code;
 
 		if( unicode )
 			HandleKey( unicode, AKeyEvent_getAction(event) );
@@ -474,13 +462,26 @@ int CNFGHandleInput()
 #ifdef ANDROID
 	int events;
 	struct android_poll_source* source;
-	while( ALooper_pollAll( 0, 0, &events, (void**)&source) >= 0 )
+	while( ALooper_pollAll( 0, 0, &events, (void**)&source) >= 0 || !ImGui::GetCurrentContext())
 	{
 		if (source != NULL)
 		{
 			source->process(gapp, source);
 		}
+
+		//Dear ImGui, wait for context
+		if (gapp->destroyRequested)
+			return 0;
+		if (!ImGui::GetCurrentContext())
+			usleep(50000);
 	}
+
+	//Dear ImGui, prepare next frame
+	AndroidDisplayKeyboard(ImGui::GetIO().WantTextInput);
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplAndroid_NewFrame();
+	ImGui::NewFrame();
+
 #endif
 
 #ifdef USE_EGL_X
@@ -499,8 +500,7 @@ int CNFGHandleInput()
 	}
 	XSetWMProtocols(XDisplay, XWindow, &XWMDeleteMessage, 0);
 #endif
-
-	return !gapp->destroyRequested;
+	return 1;
 }
 
 
