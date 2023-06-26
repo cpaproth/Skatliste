@@ -35,16 +35,17 @@ NdkCam::NdkCam(int32_t w, int32_t h, size_t i) : width(w), height(h) {
 }
 
 NdkCam::~NdkCam() {
+	width = 0;
 	ACameraCaptureSession_close(session);
 	ACaptureSessionOutputContainer_free(outputs);
 	ACaptureSessionOutput_free(output);
 	ACaptureRequest_free(request);
 	ACameraOutputTarget_free(target);
-	ANativeWindow_release(window);
-	AImageReader_delete(reader);
 	ACameraDevice_close(device);
 	ACameraManager_deleteCameraIdList(idlist);
 	ACameraManager_delete(manager);
+	ANativeWindow_release(window);
+	AImageReader_delete(reader);
 }
 
 void NdkCam::printprops(const char* id) {
@@ -75,9 +76,11 @@ void NdkCam::printprops(const char* id) {
 
 void NdkCam::onimage(void* context, AImageReader* reader) {
 	auto cam = (NdkCam*)context;
+	if (cam->width == 0)
+		return;
 
 	AImage* image = 0;
-	AImageReader_acquireLatestImage(reader, &image);
+	AImageReader_acquireNextImage(reader, &image);
 
 	uint8_t *Y = 0, *U = 0, *V = 0;
 	int lY = 0, lU = 0, lV = 0;

@@ -12,6 +12,7 @@ class NdkCam {
 	std::vector<uint8_t> rgba;
 	std::vector<uint8_t> lum;
 	std::mutex mut;
+	bool capture = false;
 
 	ACameraManager* manager = 0;
 	ACameraIdList* idlist = 0;
@@ -36,6 +37,9 @@ public:
 	int32_t h() {
 		return height;
 	}
+	bool cap() {
+		return capture;
+	}
 	unsigned get_rgba(std::function<unsigned(uint32_t*, int, int)> f) {
 		std::lock_guard<std::mutex> lg(mut);
 		return f((uint32_t*)rgba.data(), width, height);
@@ -46,8 +50,10 @@ public:
 	}
 	void start() {
 		ACameraCaptureSession_setRepeatingRequest(session, 0, 1, &request, 0);
+		capture = true;
    }
 	void stop() {
+		capture = false;
 		ACameraCaptureSession_stopRepeating(session);
 	}
 };

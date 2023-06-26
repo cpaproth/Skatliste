@@ -857,7 +857,7 @@ unsigned int CNFGTexImage( uint32_t *data, int w, int h )
 
 	glGenTextures(1, &tex);
 	glEnable( GL_TEXTURE_2D );
-	CNFGglActiveTexture( 0 );
+	CNFGglActiveTexture( GL_TEXTURE0 );
 	glBindTexture( GL_TEXTURE_2D, tex );
 
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
@@ -906,7 +906,7 @@ void CNFGBlitImage( uint32_t * data, int x, int y, int w, int h )
 #endif
 {
 	glEnable( GL_TEXTURE_2D );
-	CNFGglActiveTexture( 0 );
+	CNFGglActiveTexture( GL_TEXTURE0 );
 	glBindTexture( GL_TEXTURE_2D, gRDBlitProgTex );
 
 	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
