@@ -40,13 +40,13 @@ public:
 	bool cap() {
 		return capture;
 	}
-	unsigned get_rgba(std::function<unsigned(uint32_t*, int, int)> f) {
+	void get_rgba(std::function<void(void*, int, int)> f) {
 		std::lock_guard<std::mutex> lg(mut);
-		return f((uint32_t*)rgba.data(), width, height);
+		f(rgba.data(), width, height);
 	}
-	void get_lum(std::function<void(uint8_t*, int, int)> f) {
+	void swap_lum(std::function<void(std::vector<uint8_t>&, int32_t, int32_t)> f) {
 		std::lock_guard<std::mutex> lg(mut);
-		f(lum.data(), width, height);
+		f(lum, width, height);
 	}
 	void start() {
 		ACameraCaptureSession_setRepeatingRequest(session, 0, 1, &request, 0);

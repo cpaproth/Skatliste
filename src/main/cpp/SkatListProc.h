@@ -10,4 +10,6 @@ class SkatListProc {
 
 public:
 
+	void newlist(std::vector<uint8_t>&, int32_t, int32_t);
+
 };

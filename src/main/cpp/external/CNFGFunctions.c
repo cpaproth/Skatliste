@@ -798,7 +798,8 @@ void CNFGSetupBatchInternal()
 		"void main() { gl_FragColor = texture2D(tex,tc)."
 
 #if !defined( CNFGRASTERIZER )
-"wzyx"
+//"wzyx"
+"rgba"
 #else
 "wxyz"
 #endif

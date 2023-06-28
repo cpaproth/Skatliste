@@ -2,9 +2,7 @@
 
 #define CNFG_IMPLEMENTATION
 #include "CNFG.h"
-
-#include "NdkCam.h"
-#include "SkatListProc.h"
+#include "Program.h"
 
 #include <string>
 #include <iostream>
@@ -30,57 +28,40 @@ public:
 	}
 };
 
-NdkCam* cam = 0;
+Program* program = 0;
 void HandleKey(int, int) {}
 void HandleButton(int, int, int, int) {}
 void HandleMotion(int, int, int) {}
 void HandleDestroy() {}
 void HandleResume() {
-	if (!cam)
-		cam = new NdkCam(480, 640, 0);
+	if (!program && ImGui::GetCurrentContext())
+		program = new Program();
 }
 void HandleSuspend() {
-	delete cam;
-	cam = 0;
+	delete program;
+	program = 0;
 }
 
 int main(int, char**) {
+	coutbuf buf;
 
 	if (!AndroidHasPermissions("CAMERA"))
 		AndroidRequestAppPermissions("CAMERA");
 
-	coutbuf buf;
-	SkatListProc proc;
-
-	CNFGSetupFullscreen("Skatliste", 0);
+	CNFGSetupFullscreen("", 0);
+	HandleResume();
 
 	char text[50] = "öäüß";
 
 	while (CNFGHandleInput()) {
-
-		short w, h;
-		CNFGGetDimensions(&w, &h);
-
 		CNFGBGColor = 0x000080ff;
 		CNFGClearFrame();
 
-		if (cam && cam->cap()) {
-			unsigned tex = cam->get_rgba(CNFGTexImage);
-			if (w * cam->h() < h * cam->w())
-				CNFGBlitTex(tex, 0, 0, w, cam->h() * w / cam->w());
-			else
-				CNFGBlitTex(tex, 0, 0, cam->w() * h / cam->h(), h);
-			CNFGDeleteTex(tex);
-		}
+		if (program)
+			program->draw();
 
 		ImGui::Text("Hello, world!");
-		ImGui::InputText("Hallo", text, sizeof(text));
-		if (cam && ImGui::Button(cam->cap()? "Stop": "Start")) {
-			if (cam->cap())
-				cam->stop();
-			else
-				cam->start();
-		}
+		ImGui::InputText("Test", text, sizeof(text));
 		ImGui::TextUnformatted(buf.c_str());
 		ImGui::ShowDemoWindow();
 
