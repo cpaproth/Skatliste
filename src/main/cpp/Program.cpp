@@ -24,21 +24,28 @@ Program::~Program() {
 
 void Program::draw() {
 	if (cam.cap()) {
+		using namespace placeholders;
+
 		glBindTexture(GL_TEXTURE_2D, cap_tex);
-		cam.get_rgba([](void* d, int w, int h) {glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,  GL_RGBA, GL_UNSIGNED_BYTE, d);});
+		cam.get_rgba(bind(glTexImage2D, GL_TEXTURE_2D, 0, GL_RGBA, _2, _3, 0, GL_RGBA, GL_UNSIGNED_BYTE, _1));
 
 		auto s = ImGui::GetMainViewport()->Size;
 		s = s.x * cam.h() < s.y * cam.w()? ImVec2(s.x, cam.h() * s.x / cam.w()): ImVec2(cam.w() * s.y / cam.h(), s.y);
 		ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)cap_tex, {0, 0}, s);
 
-		cam.swap_lum([&](vector<uint8_t>& l, int32_t w, int32_t h) {proc.newlist(l, w, h);});
-	}
+		vector<float> res;
+		if (!proc.result(res))
+			cam.swap_lum(bind(&SkatListProc::scan, &proc, _1, _2, _3));
 
-	if (ImGui::Button(cam.cap()? "Stop": "Start")) {
-		if (cam.cap())
-			cam.stop();
-		else
-			cam.start();
+
+		if (ImGui::Begin("Scanne Skatliste")) {
+			if (ImGui::Button("Stop"))
+				cam.stop();
+		}
+		ImGui::End();
+
+	} else if (ImGui::Button("Start")) {
+		cam.start();
 	}
 
 
