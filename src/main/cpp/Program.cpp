@@ -35,7 +35,7 @@ void Program::draw() {
 
 		vector<float> res;
 		if (!proc.result(res))
-			cam.swap_lum(bind(&SkatListProc::scan, &proc, _1, _2, _3));
+			cam.swap_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
 
 
 		if (ImGui::Begin("Scanne Skatliste")) {

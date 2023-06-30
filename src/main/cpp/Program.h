@@ -3,13 +3,13 @@
 #include <GLES3/gl3.h>
 
 #include "NdkCam.h"
-#include "SkatListProc.h"
+#include "ListProc.h"
 
 class Program {
 	GLuint cap_tex = 0;
 	GLuint dig_tex = 0;
 	NdkCam cam;
-	SkatListProc proc;
+	ListProc proc;
 
 public:
 	Program();
