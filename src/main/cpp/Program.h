@@ -10,6 +10,7 @@ class Program {
 	GLuint dig_tex = 0;
 	NdkCam cam;
 	ListProc proc;
+	ListProc::Lines lines;
 
 public:
 	Program();

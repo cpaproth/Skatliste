@@ -51,8 +51,6 @@ int main(int, char**) {
 	CNFGSetupFullscreen("", 0);
 	HandleResume();
 
-	char text[50] = "öäüß";
-
 	while (CNFGHandleInput()) {
 		CNFGBGColor = 0x000080ff;
 		CNFGClearFrame();
@@ -60,10 +58,13 @@ int main(int, char**) {
 		if (program)
 			program->draw();
 
-		ImGui::Text("Hello, world!");
+		static char text[50] = "öäüß";
+		static bool showDemo = false;
 		ImGui::InputText("Test", text, sizeof(text));
+		ImGui::Checkbox("Demo", &showDemo);
 		ImGui::TextUnformatted(buf.c_str());
-		ImGui::ShowDemoWindow();
+		if (showDemo)
+			ImGui::ShowDemoWindow(&showDemo);
 
 		CNFGSwapBuffers();
 	}

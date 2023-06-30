@@ -1,6 +1,7 @@
 //Copyright (C) 2023 Carsten Paproth - Licensed under MIT License
 
 #include <vector>
+#include <array>
 #include <thread>
 #include <atomic>
 
@@ -18,6 +19,7 @@ public:
 	~ListProc();
 
 	void scan(std::vector<uint8_t>&, int32_t, int32_t);
-	bool result(std::vector<float>&);
 
+	using Lines = std::vector<std::array<float, 4>>;
+	void result(Lines&);
 };

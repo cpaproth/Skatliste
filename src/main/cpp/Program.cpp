@@ -23,30 +23,34 @@ Program::~Program() {
 }
 
 void Program::draw() {
-	if (cam.cap()) {
-		using namespace placeholders;
 
-		glBindTexture(GL_TEXTURE_2D, cap_tex);
-		cam.get_rgba(bind(glTexImage2D, GL_TEXTURE_2D, 0, GL_RGBA, _2, _3, 0, GL_RGBA, GL_UNSIGNED_BYTE, _1));
+	if (ImGui::Begin("Skatliste")) {
+		if (ImGui::Button(cam.cap()? "Stop": "Start"))
+			cam.cap()? cam.stop(): cam.start();
+		ImGui::SameLine();
+		if (ImGui::Button("Lerne")) {
 
-		auto s = ImGui::GetMainViewport()->Size;
-		s = s.x * cam.h() < s.y * cam.w()? ImVec2(s.x, cam.h() * s.x / cam.w()): ImVec2(cam.w() * s.y / cam.h(), s.y);
-		ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)cap_tex, {0, 0}, s);
-
-		vector<float> res;
-		if (!proc.result(res))
-			cam.swap_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
-
-
-		if (ImGui::Begin("Scanne Skatliste")) {
-			if (ImGui::Button("Stop"))
-				cam.stop();
 		}
-		ImGui::End();
-
-	} else if (ImGui::Button("Start")) {
-		cam.start();
 	}
+	ImGui::End();
 
+
+	if (!cam.cap())
+		return;
+
+	using namespace placeholders;
+
+	glBindTexture(GL_TEXTURE_2D, cap_tex);
+	cam.get_rgba(bind(glTexImage2D, GL_TEXTURE_2D, 0, GL_RGBA, _2, _3, 0, GL_RGBA, GL_UNSIGNED_BYTE, _1));
+
+	auto s = ImGui::GetMainViewport()->Size;
+	float f = s.x * cam.h() < s.y * cam.w()? s.x / cam.w(): s.y / cam.h();
+	ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)cap_tex, {0, 0}, {f * cam.w(), f * cam.h()});
+
+	cam.swap_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
+
+	proc.result(lines);
+	for (auto l : lines)
+		ImGui::GetBackgroundDrawList()->AddLine({f * l[0], f * l[1]}, {f * l[2], f * l[3]}, 0xffffffff);
 
 }
