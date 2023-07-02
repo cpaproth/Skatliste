@@ -6,15 +6,17 @@
 #include "ListProc.h"
 
 class Program {
+public:
+	Program();
+	~Program();
+
+	void draw();
+
+private:
 	GLuint cap_tex = 0;
 	GLuint dig_tex = 0;
 	NdkCam cam;
 	ListProc proc;
 	ListProc::Lines lines;
 
-public:
-	Program();
-	~Program();
-
-	void draw();
 };

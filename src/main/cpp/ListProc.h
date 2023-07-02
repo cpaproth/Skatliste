@@ -6,20 +6,23 @@
 #include <atomic>
 
 class ListProc {
+public:
+	using Lines = std::vector<std::array<float, 4>>;
+	float thfeat = 50000.f;
+
+	ListProc();
+	~ListProc();
+
+	void scan(std::vector<uint8_t>&, int32_t, int32_t);
+	void result(Lines&);
+
+private:
 	int32_t w = 0;
 	int32_t h = 0;
 	std::vector<uint8_t> input;
 	std::thread worker;
 	std::atomic<bool> finished;
+	Lines lines;
 
 	void process();
-
-public:
-	ListProc();
-	~ListProc();
-
-	void scan(std::vector<uint8_t>&, int32_t, int32_t);
-
-	using Lines = std::vector<std::array<float, 4>>;
-	void result(Lines&);
 };

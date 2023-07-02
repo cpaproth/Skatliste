@@ -31,6 +31,7 @@ void Program::draw() {
 		if (ImGui::Button("Lerne")) {
 
 		}
+		ImGui::SliderFloat("Schwellwert", &proc.thfeat, 10000.f, 100000.f);
 	}
 	ImGui::End();
 
@@ -45,12 +46,12 @@ void Program::draw() {
 
 	auto s = ImGui::GetMainViewport()->Size;
 	float f = s.x * cam.h() < s.y * cam.w()? s.x / cam.w(): s.y / cam.h();
-	ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)cap_tex, {0, 0}, {f * cam.w(), f * cam.h()});
+	ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)cap_tex, {0.f, 0.f}, {f * cam.w(), f * cam.h()});
 
 	cam.swap_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
 
 	proc.result(lines);
 	for (auto l : lines)
-		ImGui::GetBackgroundDrawList()->AddLine({f * l[0], f * l[1]}, {f * l[2], f * l[3]}, 0xffffffff);
+		ImGui::GetBackgroundDrawList()->AddLine({f * l[0], f * l[1]}, {f * l[2], f * l[3]}, 0xff0000ff);
 
 }
