@@ -31,7 +31,7 @@ void Program::draw() {
 		if (ImGui::Button("Lerne")) {
 
 		}
-		ImGui::SliderFloat("Schwellwert", &proc.thfeat, 10000.f, 100000.f);
+		ImGui::SliderFloat("Schwellwert", &proc.thfeat, 1.f, 1000.f);
 	}
 	ImGui::End();
 

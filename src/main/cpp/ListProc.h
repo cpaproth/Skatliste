@@ -8,7 +8,7 @@
 class ListProc {
 public:
 	using Lines = std::vector<std::array<float, 4>>;
-	float thfeat = 50000.f;
+	float thfeat = 10.f;
 
 	ListProc();
 	~ListProc();
