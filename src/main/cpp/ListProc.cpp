@@ -42,7 +42,7 @@ void ListProc::result(Lines& l) {
 void ListProc::process() {
 	auto finish = guard([&] {finished = true;});
 
-	using ve = vec<float, 2>;
+	using ve = vec<int, 2>;
 	using ma = mat<float, 2, 2>;
 
 	int angs = 21;
@@ -69,7 +69,7 @@ void ListProc::process() {
 				continue;
 
 			for (int a = 0; a < angs; a++) {
-				vec<int, 2> d(floor(mul(ma({cosa[a], sina[a]}, {sina[a], cosa[a]}), ve(x, y) - o)) + o);
+				ve d = ve(floor(mul(ma({cosa[a], sina[a]}, {sina[a], cosa[a]}), vec<float, 2>(ve(x, y) - o)))) + o;
 
 				if (d.x >= 0 && d.x < w)
 					vlines[a * w + d.x]++;
@@ -86,9 +86,9 @@ void ListProc::process() {
 
 	for (int a = 0; a < angs; a++) {
 		for (int d = 0; d < h; d++) {
-			if (a == 20 && d == 10)
+			if (a == 0 && d == 30)
 				lines.push_back({0.f, (d - o.y + o.x * sina[a]) / cosa[a] + o.y, float(w), (d - o.y - o.x * sina[a]) / cosa[a] + o.y});
-			if (a == 19 && d == 11)
+			if (a == 20 && d == 50)
 				lines.push_back({0.f, (d - o.y + o.x * sina[a]) / cosa[a] + o.y, float(w), (d - o.y - o.x * sina[a]) / cosa[a] + o.y});
 			if (hlines[a * h + d] > w / 2) {
 				lines.push_back({0.f, (d - o.y + o.x * sina[a]) / cosa[a] + o.y, float(w), (d - o.y - o.x * sina[a]) / cosa[a] + o.y});
