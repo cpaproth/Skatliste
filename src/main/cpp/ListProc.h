@@ -19,10 +19,16 @@ public:
 private:
 	int32_t w = 0;
 	int32_t h = 0;
+	static const int angs = 21;
+	static const int range = 5;
+	std::vector<float> cosa;
+	std::vector<float> sina;
+
 	std::vector<uint8_t> input;
 	std::thread worker;
 	std::atomic<bool> finished;
 	Lines lines;
 
+	std::vector<std::array<int, 2>> filter(std::vector<int>&);
 	void process();
 };
