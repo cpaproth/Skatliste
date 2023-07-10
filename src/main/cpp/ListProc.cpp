@@ -46,11 +46,24 @@ void ListProc::result(Lines& l) {
 	swap(lines, l);
 }
 
-vector<array<int, 2>> ListProc::filter(vector<int>& l) {
+vector<array<float, 2>> ListProc::filter(vector<int>& l) {
 	int s = (int)l.size() / angs;
-	int t = 2 * w * h / 3 / s;
-	vector<int> as(s, 0);
-	vector<array<int,2>> ls;
+	int t = w * h / s;
+	vector<int> as(s, 0), avgl(l.size(), 0), avgd(l.size(), 0), avga(l.size(), 0);
+	vector<array<float,2>> ls;
+
+	for (int d = 1; d < s - 1; d++) {
+		for (int a = 1; a < angs - 1; a++) {
+			for (int od = -1; od <= 1; od++) {
+				for (int oa = -1; oa <= 1; oa++) {
+					avgl[a * s + d] += l[(a + oa) * s + d + od];
+					avgd[a * s + d] += l[(a + oa) * s + d + od] * (d + od);
+					avga[a * s + d] += l[(a + oa) * s + d + od] * (a + oa);
+				}
+			}
+		}
+	}
+	swap(avgl, l);
 
 	for (int d = 0; d < s; d++) {
 		int b = -1;
@@ -70,9 +83,9 @@ vector<array<int, 2>> ListProc::filter(vector<int>& l) {
 	}
 
 	for (int d = range; d < s - range; d++) {
-		int a = as[d];
-		if (l[a * s + d] > t)
-			ls.push_back({d, a});
+		int p = as[d] * s + d;
+		if (l[p] > t)
+			ls.push_back({float(avgd[p]) / float(l[p]), float(avga[p]) / float(l[p])});
 	}
 	for (int i = 1; i + 1 < ls.size(); i++) {
 		if (abs(ls[i - 1][1] - ls[i][1]) > 2 && abs(ls[i + 1][1] - ls[i][1]) > 2)
@@ -92,12 +105,19 @@ void ListProc::process() {
 
 	for (int x = 1; x < w - 1; x++) {
 		for (int y = 1; y < h - 1; y++) {
+			int v = input[y * w + x];
+			vi ver(input[y * w + x + 1], input[y * w + x - 1]);
+			vi hor(input[(y + 1) * w + x], input[(y - 1) * w + x]);
+
+			if (max(minelem(ver - v), minelem(hor - v)) < thfeat)
+				continue;
+/*
 			vi tr(input[y * w + x + 1], input[(y + 1) * w + x]);
 			vi bl(input[y * w + x - 1], input[(y - 1) * w + x]);
 
 			if (length2(tr - bl) < thfeat)
 				continue;
-
+*/
 			for (int a = 0; a < angs; a++) {
 				vi d = vi(floor(mul(ma({cosa[a], sina[a]}, {sina[a], cosa[a]}), vf(vi(x, y) - o)))) + o;
 
@@ -117,14 +137,14 @@ void ListProc::process() {
 
 	lines.clear();
 	for (int i = 0; i < vl.size(); i++) {
-		int d = vl[i][0];
-		int a = vl[i][1];
-		lines.push_back({(d - o.x + o.y * sina[a]) / cosa[a] + o.x, 0.f, (d - o.x - o.y * sina[a]) / cosa[a] + o.x, float(h)});
+		float d = vl[i][0];
+		float a = (vl[i][1] - (angs - 1) / 2.f) * 0.01f;
+		lines.push_back({(d - o.x + o.y * sinf(a)) / cosf(a) + o.x, 0.f, (d - o.x - o.y * sinf(a)) / cosf(a) + o.x, float(h)});
 	}
 	for (int i = 0; i < hl.size(); i++) {
-		int d = hl[i][0];
-		int a = hl[i][1];
-		lines.push_back({0.f, (d - o.y + o.x * sina[a]) / cosa[a] + o.y, float(w), (d - o.y - o.x * sina[a]) / cosa[a] + o.y});
+		float d = hl[i][0];
+		float a = (hl[i][1] - (angs - 1) / 2.f) * 0.01f;
+		lines.push_back({0.f, (d - o.y + o.x * sinf(a)) / cosf(a) + o.y, float(w), (d - o.y - o.x * sinf(a)) / cosf(a) + o.y});
 	}
 }
 

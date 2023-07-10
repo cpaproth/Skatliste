@@ -29,6 +29,6 @@ private:
 	std::atomic<bool> finished;
 	Lines lines;
 
-	std::vector<std::array<int, 2>> filter(std::vector<int>&);
+	std::vector<std::array<float, 2>> filter(std::vector<int>&);
 	void process();
 };
