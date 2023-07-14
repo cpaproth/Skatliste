@@ -66,12 +66,9 @@ vector<array<float, 2>> ListProc::filter(vector<int>& l) {
 	swap(avgl, l);
 
 	for (int d = 0; d < s; d++) {
-		int b = -1;
 		for (int a = 0; a < angs; a++) {
-			if (l[a * s + d] > b) {
-				b = l[a * s + d];
+			if (l[a * s + d] > l[as[d] * s + d])
 				as[d] = a;
-			}
 		}
 	}
 	for (int d = range; d < s - range; d++) {
@@ -84,12 +81,12 @@ vector<array<float, 2>> ListProc::filter(vector<int>& l) {
 
 	for (int d = range; d < s - range; d++) {
 		int p = as[d] * s + d;
-		if (l[p] > t)
-			ls.push_back({float(avgd[p]) / float(l[p]), float(avga[p]) / float(l[p])});
+		if (l[p] > t * line_th / 50)
+			ls.push_back({float(avgd[p]) / float(l[p]) + 0.5f, float(avga[p]) / float(l[p])});
 	}
 	for (int i = 1; i + 1 < ls.size(); i++) {
-		if (abs(ls[i - 1][1] - ls[i][1]) > 2 && abs(ls[i + 1][1] - ls[i][1]) > 2)
-			ls.erase(ls.begin() + i--);
+		//if (abs(ls[i - 1][1] - ls[i][1]) > 2 && abs(ls[i + 1][1] - ls[i][1]) > 2)
+		//	ls.erase(ls.begin() + i--);
 	}
 
 	return ls;
@@ -106,24 +103,18 @@ void ListProc::process() {
 	for (int x = 1; x < w - 1; x++) {
 		for (int y = 1; y < h - 1; y++) {
 			int v = input[y * w + x];
-			vi ver(input[y * w + x + 1], input[y * w + x - 1]);
-			vi hor(input[(y + 1) * w + x], input[(y - 1) * w + x]);
+			int ver = minelem(vi(input[y * w + x + 1], input[y * w + x - 1]) - v);
+			int hor = minelem(vi(input[(y + 1) * w + x], input[(y - 1) * w + x]) - v);
 
-			if (max(minelem(ver - v), minelem(hor - v)) < thfeat)
+			if (ver < edge_th && hor < edge_th)
 				continue;
-/*
-			vi tr(input[y * w + x + 1], input[(y + 1) * w + x]);
-			vi bl(input[y * w + x - 1], input[(y - 1) * w + x]);
 
-			if (length2(tr - bl) < thfeat)
-				continue;
-*/
 			for (int a = 0; a < angs; a++) {
 				vi d = vi(floor(mul(ma({cosa[a], sina[a]}, {sina[a], cosa[a]}), vf(vi(x, y) - o)))) + o;
 
-				if (d.x >= 0 && d.x < w)
+				if (ver >= edge_th && d.x >= 0 && d.x < w)
 					vlines[a * w + d.x]++;
-				if (d.y >= 0 && d.y < h)
+				if (hor >= edge_th && d.y >= 0 && d.y < h)
 					hlines[a * h + d.y]++;
 			}
 		}

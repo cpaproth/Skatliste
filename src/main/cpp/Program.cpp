@@ -31,7 +31,8 @@ void Program::draw() {
 		if (ImGui::Button("Lerne")) {
 
 		}
-		ImGui::SliderInt("Schwellwert", &proc.thfeat, 1, 100);
+		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
+		ImGui::SliderInt("Line", &proc.line_th, 1, 100);
 	}
 	ImGui::End();
 
