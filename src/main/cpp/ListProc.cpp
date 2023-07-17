@@ -7,13 +7,14 @@
 
 using namespace std;
 using namespace linalg;
-using vi = vec<int, 2>;
-using vf = vec<float, 2>;
-using ma = mat<float, 2, 2>;
+
+vec2 intersect_lines(const vec2& l1, const vec2& l2) {
+	return mul(inverse(mat2({cosf(l1.x), cosf(l2.x)}, {sinf(l1.x), sinf(l2.x)})), vec2(l1.y, l2.y));
+}
 
 ListProc::ListProc() : finished(false), cosa(angs), sina(angs) {
 	for (int a = 0; a < angs; a++) {
-		float ang = (a - (angs - 1) / 2.f) * 0.01f;
+		float ang = (float(a) - (angs - 1) / 2.f) * 0.01f;
 		cosa[a] = cosf(ang);
 		sina[a] = sinf(ang);
 	}
@@ -46,11 +47,11 @@ void ListProc::result(Lines& l) {
 	swap(lines, l);
 }
 
-vector<array<float, 2>> ListProc::filter(vector<int>& l) {
+vector<vec2> ListProc::filter(vector<int>& l) {
 	int s = (int)l.size() / angs;
 	int t = w * h / s;
 	vector<int> as(s, 0), avgl(l.size(), 0), avgd(l.size(), 0), avga(l.size(), 0);
-	vector<array<float,2>> ls;
+	vector<vec2> ls;
 
 	for (int d = 1; d < s - 1; d++) {
 		for (int a = 1; a < angs - 1; a++) {
@@ -81,12 +82,17 @@ vector<array<float, 2>> ListProc::filter(vector<int>& l) {
 
 	for (int d = range; d < s - range; d++) {
 		int p = as[d] * s + d;
-		if (l[p] > t * line_th / 50)
-			ls.push_back({float(avgd[p]) / float(l[p]) + 0.5f, float(avga[p]) / float(l[p])});
-	}
-	for (int i = 1; i + 1 < ls.size(); i++) {
-		//if (abs(ls[i - 1][1] - ls[i][1]) > 2 && abs(ls[i + 1][1] - ls[i][1]) > 2)
-		//	ls.erase(ls.begin() + i--);
+		if (l[p] > t * line_th / 50) {
+			float ang = (float(avga[p]) / float(l[p]) - (angs - 1) / 2.f) * 0.01f;
+			float del = float(avgd[p]) / float(l[p]) + 0.5f - float(s) / 2.f;
+			if (abs(intersect_lines(vec2(ang, del), vec2(0.f, float(s) / 2.f)).y) < float(t) / 2.f)
+				continue;
+			if (abs(intersect_lines(vec2(ang, del), vec2(0.f, float(-s) / 2.f)).y) < float(t) / 2.f)
+				continue;
+			if (!ls.empty() && abs(intersect_lines(vec2(ang, del), ls.back()).y) < float(t) / 2.f)
+				continue;
+			ls.emplace_back(ang, del);
+		}
 	}
 
 	return ls;
@@ -95,7 +101,7 @@ vector<array<float, 2>> ListProc::filter(vector<int>& l) {
 void ListProc::process() {
 	auto finish = guard([&] {finished = true;});
 	vector<int> vlines(w * angs, 0), hlines(h * angs, 0);
-	vi o(w / 2, h / 2);
+	ve2 o(w / 2, h / 2);
 
 	timespec res1 = {}, res2 = {};
 	clock_gettime(CLOCK_MONOTONIC, &res1);
@@ -103,14 +109,14 @@ void ListProc::process() {
 	for (int x = 1; x < w - 1; x++) {
 		for (int y = 1; y < h - 1; y++) {
 			int v = input[y * w + x];
-			int ver = minelem(vi(input[y * w + x + 1], input[y * w + x - 1]) - v);
-			int hor = minelem(vi(input[(y + 1) * w + x], input[(y - 1) * w + x]) - v);
+			int ver = minelem(ve2(input[y * w + x + 1], input[y * w + x - 1]) - v);
+			int hor = minelem(ve2(input[(y + 1) * w + x], input[(y - 1) * w + x]) - v);
 
 			if (ver < edge_th && hor < edge_th)
 				continue;
 
 			for (int a = 0; a < angs; a++) {
-				vi d = vi(floor(mul(ma({cosa[a], sina[a]}, {sina[a], cosa[a]}), vf(vi(x, y) - o)))) + o;
+				ve2 d = ve2(floor(mul(mat2({cosa[a], -sina[a]}, {sina[a], cosa[a]}), vec2(ve2(x, y) - o)))) + o;
 
 				if (ver >= edge_th && d.x >= 0 && d.x < w)
 					vlines[a * w + d.x]++;
@@ -127,15 +133,16 @@ void ListProc::process() {
 	auto hl = filter(hlines);
 
 	lines.clear();
-	for (int i = 0; i < vl.size(); i++) {
-		float d = vl[i][0];
-		float a = (vl[i][1] - (angs - 1) / 2.f) * 0.01f;
-		lines.push_back({(d - o.x + o.y * sinf(a)) / cosf(a) + o.x, 0.f, (d - o.x - o.y * sinf(a)) / cosf(a) + o.x, float(h)});
+	if (vl.empty() || hl.empty())
+		return;
+	for (auto& i : vl) {
+		vec2 p1 = intersect_lines(i, hl.front() + vec2(M_PI / 2.f, 0.f)) + o;
+		vec2 p2 = intersect_lines(i, hl.back() + vec2(M_PI / 2.f, 0.f)) + o;
+		lines.emplace_back(p1, p2);
 	}
-	for (int i = 0; i < hl.size(); i++) {
-		float d = hl[i][0];
-		float a = (hl[i][1] - (angs - 1) / 2.f) * 0.01f;
-		lines.push_back({0.f, (d - o.y + o.x * sinf(a)) / cosf(a) + o.y, float(w), (d - o.y - o.x * sinf(a)) / cosf(a) + o.y});
+	for (auto& i : hl) {
+		vec2 p1 = intersect_lines(i + vec2(M_PI / 2.f, 0.f), vl.front()) + o;
+		vec2 p2 = intersect_lines(i + vec2(M_PI / 2.f, 0.f), vl.back()) + o;
+		lines.emplace_back(p1, p2);
 	}
 }
-

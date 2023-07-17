@@ -46,13 +46,13 @@ void Program::draw() {
 	cam.get_rgba(bind(glTexImage2D, GL_TEXTURE_2D, 0, GL_RGBA, _2, _3, 0, GL_RGBA, GL_UNSIGNED_BYTE, _1));
 
 	auto s = ImGui::GetMainViewport()->Size;
-	float f = s.x * cam.h() < s.y * cam.w()? s.x / cam.w(): s.y / cam.h();
-	ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)cap_tex, {0.f, 0.f}, {f * cam.w(), f * cam.h()});
+	float w = float(cam.w()), h = float(cam.h()), f = s.x * h < s.y * w? s.x / w: s.y / h;
+	ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)cap_tex, {0.f, 0.f}, {f * w, f * h});
 
 	cam.swap_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
 
 	proc.result(lines);
-	for (auto l : lines)
-		ImGui::GetBackgroundDrawList()->AddLine({f * l[0], f * l[1]}, {f * l[2], f * l[3]}, 0xff0000ff);
+	for (auto& l : lines)
+		ImGui::GetBackgroundDrawList()->AddLine({f * l.x.x, f * l.x.y}, {f * l.y.x, f * l.y.y}, 0xff0000ff);
 
 }
