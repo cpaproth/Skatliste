@@ -25,7 +25,7 @@ public:
 	~ListProc();
 
 	void scan(std::vector<uint8_t>&, int32_t, int32_t);
-	void result(Lines&);
+	bool result(Lines&);
 
 private:
 	int32_t w = 0;
@@ -41,5 +41,6 @@ private:
 	Lines lines;
 
 	std::vector<vec2> filter(std::vector<int>&);
+	float bilinear(float, float);
 	void process();
 };

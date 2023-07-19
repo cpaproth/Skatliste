@@ -37,14 +37,25 @@ void ListProc::scan(vector<uint8_t>& l, int32_t width, int32_t height) {
 	worker = thread(&ListProc::process, this);
 }
 
-void ListProc::result(Lines& l) {
+bool ListProc::result(Lines& l) {
 	if (!finished)
-		return;
+		return false;
 
 	worker.join();
 	finished = false;
 
+	Lines old;
+	swap(old, l);
 	swap(lines, l);
+
+	if (old.size() < 20 || l.size() < 20 || old.size() != l.size())
+		return false;
+
+	for (int i = 0; i < l.size(); i++) {
+		if (length(old[i].x - l[i].x) > 2.f || length(old[i].y - l[i].y) > 2.f)
+			return false;
+	}
+	return true;
 }
 
 vector<vec2> ListProc::filter(vector<int>& l) {
@@ -98,6 +109,17 @@ vector<vec2> ListProc::filter(vector<int>& l) {
 	return ls;
 }
 
+float ListProc::bilinear(float, float) {
+	/*template<class T> double bilinear(const valarray<T>& mem, unsigned w, unsigned h, unsigned x, unsigned y, double wx, double wy) {
+		const T& m0 = mem[y * w + x];
+		const T& m1 = x + 1 < w? mem[y * w + x + 1]: m0;
+		const T& m2 = y + 1 < h? mem[(y + 1) * w + x]: m0;
+		const T& m3 = x + 1 < w && y + 1 < h? mem[(y + 1) * w + x + 1]: x + 1 < w? m1: m2;
+		return (1. - wx) * (1. - wy) * m0 + wx * (1. - wy) * m1 + (1. - wx) * wy * m2 + wx * wy * m3;
+	}*/
+	return 0;
+}
+
 void ListProc::process() {
 	auto finish = guard([&] {finished = true;});
 	vector<int> vlines(w * angs, 0), hlines(h * angs, 0);
@@ -145,4 +167,36 @@ void ListProc::process() {
 		vec2 p2 = intersect_lines(i + vec2(M_PI / 2.f, 0.f), vl.back()) + o;
 		lines.emplace_back(p1, p2);
 	}
+
+	for (int x = 0; x + 1 < vl.size(); x++) {
+		for (int y = 0; y + 1 < hl.size(); y++) {
+			vec3 u1(intersect_lines(vl[x], hl[y] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
+			vec3 u2(intersect_lines(vl[x + 1], hl[y] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
+			vec3 u3(intersect_lines(vl[x + 1], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
+			vec3 u4(intersect_lines(vl[x], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
+
+			float height = 16., width = ceil((length(u2 - u1) + length(u3 - u4)) / (length(u4 - u1) + length(u3 - u2)) * height);
+
+			vec3 v1(0.f, 0.f, 1.f);
+			vec3 v2(width - 1.f, 0.f, 1.f);
+			vec3 v3(width - 1.f, height - 1.f, 1.f);
+			vec3 v4(0.f, height - 1.f, 1.f);
+
+			vec3 u = mul(inverse(mat3(u1, u2, u3)), u4);
+			vec3 v = mul(inverse(mat3(v1, v2, v3)), v4);
+			mat3 m = mul(mat3(u1 * u.x, u2 * u.y, u3 * u.z), inverse(mat3(v1 * v.x, v2 * v.y, v3 * v.z)));
+
+			for (float xi = 0.f; xi < width; xi++) {
+				for (float yi = 0.f; yi < height; yi++) {
+					vec3 r = mul(m, vec3(xi, yi, 1.f));
+					float val = bilinear(r.x, r.y);
+					using namespace ostream_overloads;
+					//if (x==0 && y==0&&xi==0&&yi==0)
+					//	cout <<m<<endl;
+				}
+			}
+		}
+	}
+
 }
+

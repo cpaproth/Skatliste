@@ -25,7 +25,7 @@ Program::~Program() {
 void Program::draw() {
 
 	if (ImGui::Begin("Skatliste")) {
-		if (ImGui::Button(cam.cap()? "Stop": "Start"))
+		if (ImGui::Button(cam.cap()? "Stop": "Scan"))
 			cam.cap()? cam.stop(): cam.start();
 		ImGui::SameLine();
 		if (ImGui::Button("Lerne")) {
@@ -37,8 +37,8 @@ void Program::draw() {
 	ImGui::End();
 
 
-	if (!cam.cap())
-		return;
+	//if (!cam.cap())
+	//	return;
 
 	using namespace placeholders;
 
@@ -49,9 +49,11 @@ void Program::draw() {
 	float w = float(cam.w()), h = float(cam.h()), f = s.x * h < s.y * w? s.x / w: s.y / h;
 	ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)cap_tex, {0.f, 0.f}, {f * w, f * h});
 
-	cam.swap_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
+	if (cam.cap())
+		cam.swap_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
 
-	proc.result(lines);
+	if (proc.result(lines))
+		cam.stop();
 	for (auto& l : lines)
 		ImGui::GetBackgroundDrawList()->AddLine({f * l.x.x, f * l.x.y}, {f * l.y.x, f * l.y.y}, 0xff0000ff);
 
