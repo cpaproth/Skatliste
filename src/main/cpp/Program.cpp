@@ -33,6 +33,14 @@ void Program::draw() {
 		}
 		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
 		ImGui::SliderInt("Line", &proc.line_th, 1, 100);
+
+		static int field = 0;
+		if (field < fields.size()) {
+			glBindTexture(GL_TEXTURE_2D, dig_tex);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields[field].size() / 16, 16, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields[field].data());
+			ImGui::Image((void*)(intptr_t)dig_tex, {float(fields[field].size()) / 16 * 3, 48});
+		}
+		ImGui::SliderInt("Field", &field, 0, (int)fields.size());
 	}
 	ImGui::End();
 
@@ -52,7 +60,7 @@ void Program::draw() {
 	if (cam.cap())
 		cam.swap_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
 
-	if (proc.result(lines))
+	if (proc.result(lines, fields))
 		cam.stop();
 	for (auto& l : lines)
 		ImGui::GetBackgroundDrawList()->AddLine({f * l.x.x, f * l.x.y}, {f * l.y.x, f * l.y.y}, 0xff0000ff);

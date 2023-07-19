@@ -17,6 +17,7 @@ vec2 intersect_lines(const vec2&, const vec2&);
 class ListProc {
 public:
 	using Lines = std::vector<mat2>;
+	using Fields = std::vector<std::vector<uint8_t>>;
 
 	int edge_th = 10;
 	int line_th = 50;
@@ -25,7 +26,7 @@ public:
 	~ListProc();
 
 	void scan(std::vector<uint8_t>&, int32_t, int32_t);
-	bool result(Lines&);
+	bool result(Lines&, Fields&);
 
 private:
 	int32_t w = 0;
@@ -39,8 +40,8 @@ private:
 	std::thread worker;
 	std::atomic<bool> finished;
 	Lines lines;
+	Fields fields;
 
 	std::vector<vec2> filter(std::vector<int>&);
-	float bilinear(float, float);
 	void process();
 };
