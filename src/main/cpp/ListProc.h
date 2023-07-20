@@ -19,6 +19,8 @@ public:
 	using Lines = std::vector<mat2>;
 	using Fields = std::vector<std::vector<uint8_t>>;
 
+	static const int dig_h = 16;
+
 	int edge_th = 10;
 	int line_th = 50;
 

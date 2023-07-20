@@ -7,6 +7,7 @@ using namespace std;
 
 Program::Program() : cam(480, 640, 0) {
 	glEnable(GL_TEXTURE_2D);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	for (auto tex : {&cap_tex, &dig_tex}) {
 		glGenTextures(1, tex);
 		glBindTexture(GL_TEXTURE_2D, *tex);
@@ -34,19 +35,19 @@ void Program::draw() {
 		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
 		ImGui::SliderInt("Line", &proc.line_th, 1, 100);
 
-		static int field = 0;
-		if (field < fields.size()) {
+		if (!fields.empty()) {
+			static int f = 0;
+			f = max(0, min(f, (int)fields.size() - 1));
+			int width = int(fields[f].size()) / ListProc::dig_h, height = ListProc::dig_h;
 			glBindTexture(GL_TEXTURE_2D, dig_tex);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields[field].size() / 16, 16, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields[field].data());
-			ImGui::Image((void*)(intptr_t)dig_tex, {float(fields[field].size()) / 16 * 3, 48});
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width, height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields[f].data());
+			ImGui::Image((void*)(intptr_t)dig_tex, {width * 4.f, height * 4.f});
+			ImGui::SliderInt("Field1", &f, 0, (int)fields.size() - 1);
+			ImGui::InputInt("Field2", &f);
 		}
-		ImGui::SliderInt("Field", &field, 0, (int)fields.size());
 	}
 	ImGui::End();
 
-
-	//if (!cam.cap())
-	//	return;
 
 	using namespace placeholders;
 
