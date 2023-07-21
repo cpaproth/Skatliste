@@ -18,6 +18,6 @@ private:
 	NdkCam cam;
 	ListProc proc;
 	ListProc::Lines lines;
-	ListProc::Fields fields;
+	Fields fields;
 
 };

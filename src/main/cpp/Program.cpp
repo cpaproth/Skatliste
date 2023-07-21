@@ -35,15 +35,12 @@ void Program::draw() {
 		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
 		ImGui::SliderInt("Line", &proc.line_th, 1, 100);
 
-		if (!fields.empty()) {
-			static int f = 0;
-			f = max(0, min(f, (int)fields.size() - 1));
-			int width = int(fields[f].size()) / ListProc::dig_h, height = ListProc::dig_h;
+		if (fields.select()) {
 			glBindTexture(GL_TEXTURE_2D, dig_tex);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, width, height, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields[f].data());
-			ImGui::Image((void*)(intptr_t)dig_tex, {width * 4.f, height * 4.f});
-			ImGui::SliderInt("Field1", &f, 0, (int)fields.size() - 1);
-			ImGui::InputInt("Field2", &f);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields.w(), fields.h(), 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields.data());
+			ImGui::Image((void*)(intptr_t)dig_tex, {fields.w() * 4.f, fields.h() * 4.f});
+			ImGui::InputInt("FieldX", &fields.x);
+			ImGui::InputInt("FieldY", &fields.y);
 		}
 	}
 	ImGui::End();

@@ -145,7 +145,7 @@ void ListProc::process() {
 	auto hl = filter(hlines);
 
 	lines.clear();
-	fields.clear();
+	fields.resize((int)vl.size() - 1, (int)hl.size() - 1);
 	if (vl.empty() || hl.empty())
 		return;
 	for (auto& i : vl) {
@@ -166,20 +166,19 @@ void ListProc::process() {
 			vec3 u3(intersect_lines(vl[x + 1], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
 			vec3 u4(intersect_lines(vl[x], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
 
-			int dig_w = ceil((length(u2 - u1) + length(u3 - u4)) / (length(u4 - u1) + length(u3 - u2)) * dig_h);
+			fields.select((length(u2 - u1) + length(u3 - u4)) / (length(u4 - u1) + length(u3 - u2)), x, y);
 
 			vec3 v1(0.f, 0.f, 1.f);
-			vec3 v2(dig_w - 1.f, 0.f, 1.f);
-			vec3 v3(dig_w - 1.f, dig_h - 1.f, 1.f);
-			vec3 v4(0.f, dig_h - 1.f, 1.f);
+			vec3 v2(fields.w() - 1.f, 0.f, 1.f);
+			vec3 v3(fields.w() - 1.f, fields.h() - 1.f, 1.f);
+			vec3 v4(0.f, fields.h() - 1.f, 1.f);
 
 			vec3 u = mul(inverse(mat3(u1, u2, u3)), u4);
 			vec3 v = mul(inverse(mat3(v1, v2, v3)), v4);
 			mat3 m = mul(mat3(u1 * u.x, u2 * u.y, u3 * u.z), inverse(mat3(v1 * v.x, v2 * v.y, v3 * v.z)));
 
-			fields.emplace_back(dig_w * dig_h);
-			for (int yf = 0; yf < dig_h; yf++) {
-				for (int xf = 0; xf < dig_w; xf++) {
+			for (int yf = 0; yf < fields.h(); yf++) {
+				for (int xf = 0; xf < fields.w(); xf++) {
 					vec3 r = mul(m, vec3(xf, yf, 1.f));
 					r.x = clamp(r.x / r.z - 0.5f, 0.f, float(w - 1));
 					r.y = clamp(r.y / r.z - 0.5f, 0.f, float(h - 1));
@@ -195,7 +194,7 @@ void ListProc::process() {
 					uint8_t& m3 = xi + 1 < w && yi + 1 < h? input[(yi + 1) * w + xi + 1]: xi + 1 < w? m1: m2;
 					float val = (1.f - wx) * (1.f - wy) * m0 + wx * (1.f - wy) * m1 + (1.f - wx) * wy * m2 + wx * wy * m3;
 
-					fields.back()[yf * dig_w + xf] = (uint8_t)clamp(val, 0.f, 255.f);
+					fields(xf, yf) = (uint8_t)clamp(val, 0.f, 255.f);
 				}
 			}
 		}
