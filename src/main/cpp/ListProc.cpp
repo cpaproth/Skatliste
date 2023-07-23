@@ -96,7 +96,7 @@ vector<vec2> ListProc::filter(vector<int>& l) {
 		int p = as[d] * s + d;
 		if (l[p] > t * line_th / 50) {
 			float ang = (float(avga[p]) / float(l[p]) - (angs - 1) / 2.f) * 0.01f;
-			float del = float(avgd[p]) / float(l[p]) + 0.5f - float(s) / 2.f;
+			float del = float(avgd[p]) / float(l[p]) - float(s) / 2.f;
 			if (abs(intersect_lines(vec2(ang, del), vec2(0.f, float(s) / 2.f)).y) < float(t) / 2.f)
 				continue;
 			if (abs(intersect_lines(vec2(ang, del), vec2(0.f, float(-s) / 2.f)).y) < float(t) / 2.f)
@@ -115,8 +115,8 @@ void ListProc::process() {
 	vector<int> vlines(w * angs, 0), hlines(h * angs, 0);
 	ve2 o(w / 2, h / 2);
 
-	timespec res1 = {}, res2 = {};
-	clock_gettime(CLOCK_MONOTONIC, &res1);
+	//timespec res1 = {}, res2 = {};
+	//clock_gettime(CLOCK_MONOTONIC, &res1);
 
 	for (int x = 1; x < w - 1; x++) {
 		for (int y = 1; y < h - 1; y++) {
@@ -128,7 +128,7 @@ void ListProc::process() {
 				continue;
 
 			for (int a = 0; a < angs; a++) {
-				ve2 d = ve2(floor(mul(mat2({cosa[a], -sina[a]}, {sina[a], cosa[a]}), vec2(ve2(x, y) - o)))) + o;
+				ve2 d = ve2(floor(mul(mat2({cosa[a], -sina[a]}, {sina[a], cosa[a]}), vec2(ve2(x, y) - o) + 0.5f))) + o;
 
 				if (ver >= edge_th && d.x >= 0 && d.x < w)
 					vlines[a * w + d.x]++;
@@ -138,7 +138,7 @@ void ListProc::process() {
 		}
 	}
 
-	clock_gettime(CLOCK_MONOTONIC, &res2);
+	//clock_gettime(CLOCK_MONOTONIC, &res2);
 	//cout << (res2.tv_sec - res1.tv_sec) * 1000. + (res2.tv_nsec - res1.tv_nsec) * 1.e-6 << endl;
 
 	auto vl = filter(vlines);
@@ -180,8 +180,8 @@ void ListProc::process() {
 			for (int yf = 0; yf < fields.h(); yf++) {
 				for (int xf = 0; xf < fields.w(); xf++) {
 					vec3 r = mul(m, vec3(xf, yf, 1.f));
-					r.x = clamp(r.x / r.z - 0.5f, 0.f, float(w - 1));
-					r.y = clamp(r.y / r.z - 0.5f, 0.f, float(h - 1));
+					r.x = clamp(r.x / r.z, 0.f, float(w - 1));
+					r.y = clamp(r.y / r.z, 0.f, float(h - 1));
 
 					int xi = (int)r.x;
 					int yi = (int)r.y;
