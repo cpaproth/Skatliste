@@ -4,6 +4,7 @@
 #include "utils.h"
 #include "linalg.h"
 #include <iostream>
+#include <fstream>
 
 using namespace std;
 using namespace linalg;
@@ -56,6 +57,17 @@ bool ListProc::result(Lines& l, Fields& f) {
 		if (length(old[i].x - l[i].x) > 3.f || length(old[i].y - l[i].y) > 3.f)
 			return false;
 	}
+
+//	ofstream file("/storage/emulated/0/Download/img.480.ubyte");
+//	file.write((char*)input.data(), input.size());
+//	ofstream ofile("/storage/emulated/0/Download/img.txt");
+//	ofile << "huch\n";
+//	ofile.close();
+//	ifstream ifile("/storage/emulated/0/Download/img.txt");
+//	string str;
+//	ifile >> str;
+//	cout << str << endl;
+
 	return true;
 }
 
@@ -67,11 +79,17 @@ vector<vec2> ListProc::filter(vector<int>& l) {
 
 	for (int d = 1; d < s - 1; d++) {
 		for (int a = 1; a < angs - 1; a++) {
+			int minl = INT_MAX;
 			for (int od = -1; od <= 1; od++) {
 				for (int oa = -1; oa <= 1; oa++) {
-					avgl[a * s + d] += l[(a + oa) * s + d + od];
-					avgd[a * s + d] += l[(a + oa) * s + d + od] * (d + od);
-					avga[a * s + d] += l[(a + oa) * s + d + od] * (a + oa);
+					minl = min(minl, l[(a + oa) * s + d + od]);
+				}
+			}
+			for (int od = -1; od <= 1; od++) {
+				for (int oa = -1; oa <= 1; oa++) {
+					avgl[a * s + d] += l[(a + oa) * s + d + od] - minl;
+					avgd[a * s + d] += (l[(a + oa) * s + d + od] - minl) * (d + od);
+					avga[a * s + d] += (l[(a + oa) * s + d + od] - minl) * (a + oa);
 				}
 			}
 		}
