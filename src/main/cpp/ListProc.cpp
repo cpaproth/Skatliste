@@ -13,6 +13,10 @@ vec2 intersect_lines(const vec2& l1, const vec2& l2) {
 	return mul(inverse(mat2({cosf(l1.x), cosf(l2.x)}, {sinf(l1.x), sinf(l2.x)})), vec2(l1.y, l2.y));
 }
 
+vec2 intersect_lines_n(const vec2& v, const vec2& h) {
+	return vec2(v.y * h.x + v.x, h.y * v.x + h.x) / (1.f - h.y * v.y);
+}
+
 ListProc::ListProc() : finished(false), cosa(angs), sina(angs) {
 	for (int a = 0; a < angs; a++) {
 		float ang = (float(a) - (angs - 1) / 2.f) * 0.01f;
@@ -127,10 +131,50 @@ vector<vec2> ListProc::filter(vector<int>& l) {
 
 	return ls;
 }
+int count1=0,count2=0;
+vec2 ListProc::fit_line(const vec2& p1, const vec2& p2, const vector<int>& e, int o) {
+	float n = 0.f, mx = 0.f, my = 0.f, sxy = 0.f, sxx = 0.f, syy = 0.f;
+	for (int x = max(0, (int)min(p1.x, p2.x) - 2); x < min(w, (int)max(p1.x, p2.x) + 2); x++) {
+		for (int y = max(0, (int)min(p1.y, p2.y) - 2); y < min(h, (int)max(p1.y, p2.y) + 2); y++) {
+			if ((e[y * w + x] & o) == o) {
+				n += 1.f;
+				mx += (float)x;
+				my += (float)y;
+			}
+		}
+	}
+	mx /= n;
+	my /= n;
+	for (int x = max(0, (int)min(p1.x, p2.x) - 2); x < min(w, (int)max(p1.x, p2.x) + 2); x++) {
+		for (int y = max(0, (int)min(p1.y, p2.y) - 2); y < min(h, (int)max(p1.y, p2.y) + 2); y++) {
+			if ((e[y * w + x] & o) == o) {
+				sxy += ((float)x - mx) * ((float)y - my);
+				sxx += ((float)x - mx) * ((float)x - mx);
+				syy += ((float)y - my) * ((float)y - my);
+			}
+		}
+	}
+count2++;
+	if (n < 5.f) {
+		count1++;
+		n = 2.f;
+		mx = (p1.x + p2.x) / 2.f;
+		my = (p1.y + p2.y) / 2.f;
+		sxy = (p1.x - mx) * (p1.y - my) + (p2.x - mx) * (p2.y - my);
+		sxx = (p1.x - mx) * (p1.x - mx) + (p2.x - mx) * (p2.x - mx);
+		syy = (p1.y - my) * (p1.y - my) + (p2.y - my) * (p2.y - my);
+	}
+
+	if (o == 1) {
+		swap(mx, my);
+		swap(sxx, syy);
+	}
+	return vec2(my - mx * sxy / sxx, sxy / sxx);
+}
 
 void ListProc::process() {
 	auto finish = guard([&] {finished = true;});
-	vector<int> vlines(w * angs, 0), hlines(h * angs, 0);
+	vector<int> vlines(w * angs, 0), hlines(h * angs, 0), edges(input.size());
 	ve2 o(w / 2, h / 2);
 
 	//timespec res1 = {}, res2 = {};
@@ -144,6 +188,7 @@ void ListProc::process() {
 
 			if (ver < edge_th && hor < edge_th)
 				continue;
+			edges[y * w + x] = (ver >= edge_th? 1: 0) + (hor >= edge_th? 2: 0);
 
 			for (int a = 0; a < angs; a++) {
 				ve2 d = ve2(floor(mul(mat2({cosa[a], -sina[a]}, {sina[a], cosa[a]}), vec2(ve2(x, y) - o) + 0.5f))) + o;
@@ -179,10 +224,23 @@ void ListProc::process() {
 
 	for (int y = 0; y + 1 < hl.size(); y++) {
 		for (int x = 0; x + 1 < vl.size(); x++) {
-			vec3 u1(intersect_lines(vl[x], hl[y] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
-			vec3 u2(intersect_lines(vl[x + 1], hl[y] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
-			vec3 u3(intersect_lines(vl[x + 1], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
-			vec3 u4(intersect_lines(vl[x], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
+			//vec3 u1(intersect_lines(vl[x], hl[y] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
+			//vec3 u2(intersect_lines(vl[x + 1], hl[y] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
+			//vec3 u3(intersect_lines(vl[x + 1], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
+			//vec3 u4(intersect_lines(vl[x], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o, 1.f);
+
+			vec2 bl(intersect_lines(vl[x], hl[y] + vec2(M_PI / 2.f, 0.f)) + o);
+			vec2 br(intersect_lines(vl[x + 1], hl[y] + vec2(M_PI / 2.f, 0.f)) + o);
+			vec2 tr(intersect_lines(vl[x + 1], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o);
+			vec2 tl(intersect_lines(vl[x], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o);
+			vec2 left(fit_line(bl, tl, edges, 1));
+			vec2 right(fit_line(br, tr, edges, 1));
+			vec2 bottom(fit_line(bl, br, edges, 2));
+			vec2 top(fit_line(tl, tr, edges, 2));
+			vec3 u1(intersect_lines_n(left, bottom), 1.f);
+			vec3 u2(intersect_lines_n(right, bottom), 1.f);
+			vec3 u3(intersect_lines_n(right, top), 1.f);
+			vec3 u4(intersect_lines_n(left, top), 1.f);
 
 			fields.select((length(u2 - u1) + length(u3 - u4)) / (length(u4 - u1) + length(u3 - u2)), x, y);
 
@@ -217,6 +275,7 @@ void ListProc::process() {
 			}
 		}
 	}
-
+cout<<count1*100/count2<<endl;
+	count1=count2=0;
 }
 
