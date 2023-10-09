@@ -80,6 +80,6 @@ private:
 	Fields fields;
 
 	std::vector<vec2> filter(std::vector<int>&);
-	vec2 fit_line(const vec2&, const vec2&, const std::vector<int>&, int);
+	vec2 find_corner(const vec2&, const std::vector<int>&);
 	void process();
 };
