@@ -215,6 +215,96 @@ void ListProc::process() {
 					fields(xf, yf) = (uint8_t)clamp(val, 0.f, 255.f);
 				}
 			}
+
+
+			//separate chars
+
+			int wf = fields.w(), hf = fields.h(), md = hf / 2;
+			uint8_t* field = fields.data();
+			vector<float> values(wf * hf);
+			vector<int> ind(values.size());
+
+			for (int i = 0; i < values.size(); i++)
+				values[i] = field[i];
+
+			for (int yf = 1; yf <= md; yf++) {
+				for (int xf = 0; xf < wf; xf++) {
+					float* p = max_element(&values[(yf - 1) * wf + (xf > 0? xf - 1: xf)], &values[(yf - 1) * wf + (xf + 1 < wf? xf + 1: xf)] + 1);
+					values[yf * wf + xf] += *p;
+					ind[(yf - 1) * wf + xf] = xf + (p - &values[(yf - 1) * wf + xf]);
+				}
+			}
+			for (int yf = hf - 2; yf >= md; yf--) {
+				for (int xf = 0; xf < wf; xf++) {
+					float* p = max_element(&values[(yf + 1) * wf + (xf > 0? xf - 1: xf)], &values[(yf + 1) * wf + (xf + 1 < wf? xf + 1: xf)] + 1);
+					values[yf * wf + xf] += *p;
+					ind[(yf + 1) * wf + xf] = xf + (p - &values[(yf + 1) * wf + xf]);
+				}
+			}
+
+			vector<pair<int, float>> mf;
+			mf.emplace_back(0, values[md * wf]);
+			for (int xf = 1; xf + 1 < wf; xf++) {
+				float& f = values[md * wf + xf];
+				if ((f < mf.back().second || f > values[md * wf + xf + 1]) && (f > mf.back().second || f < values[md * wf + xf + 1]))
+					mf.emplace_back(xf, f);
+			}
+			mf.emplace_back(wf - 1, values[md * wf + wf - 1]);
+
+
+			for (int i = 0; i + 3 < mf.size(); i++) {
+				float mii = min(mf[i + 1].second, mf[i + 2].second);
+				float mio = min(mf[i].second, mf[i + 3].second);
+				float mai = max(mf[i + 1].second, mf[i + 2].second);
+				float mao = max(mf[i].second, mf[i + 3].second);
+				if (mii >= mio && mai <= mao && mao - mio >= 8.f * (mai - mii)) {
+					mf.erase(mf.begin() + i + 2);
+					mf.erase(mf.begin() + i + 1);
+					i = -1;
+				}
+			}
+			if (mf.size() > 1 && mf[0].second <= mf[1].second)
+				mf.erase(mf.begin());
+			if (mf.size() > 1 && mf[mf.size() - 1].second <= mf[mf.size() - 2].second)
+				mf.pop_back();
+			for (int i = 0; i + 4 < mf.size(); i += 2) {
+				float dol = mf[i].second - mf[i + 3].second;
+				float dor = mf[i + 4].second - mf[i + 1].second;
+				float dil = mf[i + 2].second - mf[i + 1].second;
+				float dir = mf[i + 2].second - mf[i + 3].second;
+				if (mf[i + 3].first - mf[i + 1].first < md && (dol + dor >= 2.f * (dil + dir) || dol >= 4.f * dil || dor >= 4.f * dir)) {
+					mf[i + 2].first = (dil * mf[i + 1].first + dir * mf[i + 3].first) / (dil + dir) + 0.5f;
+					mf[i + 2].second = min(mf[i + 1].second, mf[i + 3].second);
+					mf.erase(mf.begin() + i + 3);
+					mf.erase(mf.begin() + i + 1);
+					i = -2;
+				}
+			}
+
+			for (int i = 1; i + 1 < mf.size(); i += 2) {
+				fields.newchar();
+
+				vector<int> l(hf), r(hf);
+				l[md] = mf[i - 1].first;
+				r[md] = mf[i + 1].first;
+				for (int yf = md; yf > 0; yf--) {
+					l[yf - 1] = ind[(yf - 1) * wf + l[yf]];
+					r[yf - 1] = ind[(yf - 1) * wf + r[yf]];
+				}
+				for (int yf = md; yf + 1 < hf; yf++) {
+					l[yf + 1] = ind[(yf + 1) * wf + l[yf]];
+					r[yf + 1] = ind[(yf + 1) * wf + r[yf]];
+				}
+
+				for (int yf = 0; yf < fields.h(); yf++) {
+					for (int xf = 0; xf < fields.w(); xf++) {
+						int xd = mf[i].first + xf < l[yf] + fields.w() / 2? l[yf]: mf[i].first + xf > r[yf] + fields.w() / 2? r[yf]: mf[i].first + xf - fields.w() / 2;
+						fields(xf, yf) = field[yf * wf + xd];
+					}
+				}
+			}
+
+
 		}
 	}
 

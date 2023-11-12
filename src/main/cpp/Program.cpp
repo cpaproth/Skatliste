@@ -41,6 +41,7 @@ void Program::draw() {
 			ImGui::Image((void*)(intptr_t)dig_tex, {fields.w() * 4.f, fields.h() * 4.f});
 			ImGui::InputInt("FieldX", &fields.x);
 			ImGui::InputInt("FieldY", &fields.y);
+			ImGui::InputInt("FieldD", &fields.d);
 		}
 	}
 	ImGui::End();

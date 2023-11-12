@@ -21,6 +21,7 @@ public:
 	void resize(int w, int h) {
 		width = std::max(0, w);
 		height = std::max(0, h);
+		fields.clear();
 		fields.resize(width * height);
 	}
 	bool select(float s = 0.f, int x_ = -1, int y_ = -1, int d_ = -1) {
@@ -34,7 +35,11 @@ public:
 			fields[cur].all.resize(size * ceil(s * size));
 		return true;
 	}
-	int w() {return d > 0? size: fields[cur].all.size() / size;}
+	void newchar() {
+		d = fields[cur].chars.size() + 1;
+		fields[cur].chars.emplace_back(w() * h());
+	}
+	int w() {return d > 0? size / 5 * 4: fields[cur].all.size() / size;}
 	int h() {return size;}
 	uint8_t* data() {return d > 0? fields[cur].chars[d - 1].data(): fields[cur].all.data();}
 	uint8_t& operator()(int x_, int y_) {return data()[y_ * w() + x_];}
@@ -45,7 +50,7 @@ private:
 		std::string text;
 		int value;
 	};
-	static const int size = 16;
+	static const int size = 15;
 	int cur = 0;
 	int width = 0;
 	int height = 0;
