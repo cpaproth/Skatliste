@@ -13,10 +13,6 @@ vec2 intersect_lines(const vec2& l1, const vec2& l2) {
 	return mul(inverse(mat2({cosf(l1.x), cosf(l2.x)}, {sinf(l1.x), sinf(l2.x)})), vec2(l1.y, l2.y));
 }
 
-vec2 intersect_lines_n(const vec2& v, const vec2& h) {
-	return vec2(v.y * h.x + v.x, h.y * v.x + h.x) / (1.f - h.y * v.y);
-}
-
 ListProc::ListProc() : finished(false), cosa(angs), sina(angs) {
 	for (int a = 0; a < angs; a++) {
 		float ang = (float(a) - (angs - 1) / 2.f) * 0.01f;
@@ -62,8 +58,8 @@ bool ListProc::result(Lines& l, Fields& f) {
 			return false;
 	}
 
-//	ofstream file("/storage/emulated/0/Download/img.480.ubyte");
-//	file.write((char*)input.data(), input.size());
+	ofstream file("/storage/emulated/0/Download/img.480.ubyte");
+	file.write((char*)input.data(), input.size());
 //	ofstream ofile("/storage/emulated/0/Download/img.txt");
 //	ofile << "huch\n";
 //	ofile.close();
@@ -134,14 +130,18 @@ vector<vec2> ListProc::filter(vector<int>& l) {
 
 vec2 ListProc::find_corner(const vec2& p, const vector<int>& c) {
 	int m = INT_MIN, xm = 0, ym = 0;
-	for (int x = max(2, (int)p.x - 3); x < min(w - 2, (int)p.x + 4); x++) {
-		for (int y = max(2, (int)p.y - 3); y < min(h - 2, (int)p.y + 4); y++) {
+	for (int x = max(2, (int)p.x - 2); x < min(w - 2, (int)p.x + 3); x++) {
+		for (int y = max(2, (int)p.y - 2); y < min(h - 2, (int)p.y + 3); y++) {
 			if (c[y * w + x] > m) {
 				m = c[y * w + x];
 				xm = x;
 				ym = y;
 			}
 		}
+	}
+	if (xm==0||ym==0) {
+		cout<<"huch"<<endl;
+		return p;
 	}
 	int minc = INT_MAX, sumc = 0, xc = 0, yc = 0;
 	for (int x = xm - 1; x <= xm + 1; x++) {
