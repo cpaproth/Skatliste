@@ -66,6 +66,7 @@ public:
 	bool result(Lines&, Fields&);
 
 private:
+public:
 	int32_t w = 0;
 	int32_t h = 0;
 	static const int angs = 21;

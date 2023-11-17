@@ -39,6 +39,9 @@ void ListProc::scan(vector<uint8_t>& l, int32_t width, int32_t height) {
 	swap(input, l);
 	input.resize(w * h);
 
+	ifstream file("/storage/emulated/0/Download/img.480.ubyte");
+	file.read((char*)input.data(), input.size());
+
 	worker = thread(&ListProc::process, this);
 }
 
@@ -156,7 +159,8 @@ vec2 ListProc::find_corner(const vec2& p, const vector<int>& c) {
 			yc += (c[y * w + x] - minc) * y;
 		}
 	}
-	return vec2((float)xc, (float)yc) / (float)sumc;
+	vec2 n = vec2((float)xc, (float)yc) / (float)sumc;
+	return length(p - n) < 2.0f? n: p;
 }
 
 void ListProc::process() {
@@ -219,6 +223,8 @@ void ListProc::process() {
 			vec3 u3(find_corner(intersect_lines(vl[x + 1], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o, corners), 1.f);
 			vec3 u4(find_corner(intersect_lines(vl[x], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o, corners), 1.f);
 
+			if (length(u4 - u1) + length(u3 - u2) == 0.f)
+				continue;
 			fields.select((length(u2 - u1) + length(u3 - u4)) / (length(u4 - u1) + length(u3 - u2)), x, y);
 
 			vec3 v1(0.f, 0.f, 1.f);
