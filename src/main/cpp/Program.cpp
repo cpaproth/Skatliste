@@ -50,6 +50,7 @@ void Program::draw() {
 
 	glBindTexture(GL_TEXTURE_2D, cap_tex);
 	cam.get_rgba(bind(glTexImage2D, GL_TEXTURE_2D, 0, GL_RGBA, _2, _3, 0, GL_RGBA, GL_UNSIGNED_BYTE, _1));
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, proc.w, proc.h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, proc.input.data());
 
 	auto s = ImGui::GetMainViewport()->Size;
 	float w = float(cam.w()), h = float(cam.h()), f = s.x * h < s.y * w? s.x / w: s.y / h;
