@@ -57,12 +57,12 @@ bool ListProc::result(Lines& l, Fields& f) {
 		return false;
 
 	for (int i = 0; i < l.size(); i++) {
-		if (length(old[i].x - l[i].x) > 3.f || length(old[i].y - l[i].y) > 3.f)
+		if (length(old[i].x - l[i].x) > 5.f || length(old[i].y - l[i].y) > 5.f)
 			return false;
 	}
 
-	ofstream file("/storage/emulated/0/Download/img.480.ubyte");
-	file.write((char*)input.data(), input.size());
+//	ofstream file("/storage/emulated/0/Download/img.480.ubyte");
+//	file.write((char*)input.data(), input.size());
 //	ofstream ofile("/storage/emulated/0/Download/img.txt");
 //	ofile << "huch\n";
 //	ofile.close();
@@ -133,18 +133,14 @@ vector<vec2> ListProc::filter(vector<int>& l) {
 
 vec2 ListProc::find_corner(const vec2& p, const vector<int>& c) {
 	int m = INT_MIN, xm = 0, ym = 0;
-	for (int x = max(2, (int)p.x - 2); x < min(w - 2, (int)p.x + 3); x++) {
-		for (int y = max(2, (int)p.y - 2); y < min(h - 2, (int)p.y + 3); y++) {
+	for (int x = max(2, (int)p.x - 3); x < min(w - 2, (int)p.x + 4); x++) {
+		for (int y = max(2, (int)p.y - 3); y < min(h - 2, (int)p.y + 4); y++) {
 			if (c[y * w + x] > m) {
 				m = c[y * w + x];
 				xm = x;
 				ym = y;
 			}
 		}
-	}
-	if (xm==0||ym==0) {
-		cout<<"huch"<<endl;
-		return p;
 	}
 	int minc = INT_MAX, sumc = 0, xc = 0, yc = 0;
 	for (int x = xm - 1; x <= xm + 1; x++) {
@@ -201,27 +197,46 @@ void ListProc::process() {
 	auto vl = filter(vlines);
 	auto hl = filter(hlines);
 
+	size_t wp = vl.size(), hp = hl.size();
 	lines.clear();
-	fields.resize((int)vl.size() - 1, (int)hl.size() - 1);
-	if (vl.empty() || hl.empty())
+	fields.resize((int)wp - 1, (int)hp - 1);
+	if (wp * hp == 0)
 		return;
-	for (auto& i : vl) {
-		vec2 p1 = intersect_lines(i, hl.front() + vec2(M_PI / 2.f, 0.f)) + o;
-		vec2 p2 = intersect_lines(i, hl.back() + vec2(M_PI / 2.f, 0.f)) + o;
-		lines.emplace_back(p1, p2);
+	vector<vec2> points(wp * hp), offsets(wp * hp);
+	for (int y = 0; y < hp; y++) {
+		for (int x = 0; x < wp; x++) {
+			points[y * wp + x] = intersect_lines(vl[x], hl[y] + vec2(M_PI / 2.f, 0.f)) + o;
+			offsets[y * wp + x] = find_corner(points[y * wp + x], corners) - points[y * wp + x];
+		}
 	}
-	for (auto& i : hl) {
-		vec2 p1 = intersect_lines(i + vec2(M_PI / 2.f, 0.f), vl.front()) + o;
-		vec2 p2 = intersect_lines(i + vec2(M_PI / 2.f, 0.f), vl.back()) + o;
-		lines.emplace_back(p1, p2);
+	for (int x = wp / 2 + 1; x < wp; x++) {
+		offsets[hp / 2 * wp + x] = find_corner(points[hp / 2 * wp + x] + offsets[hp / 2 * wp + x - 1], corners) - points[hp / 2 * wp + x];
+		for (int y = hp / 2 + 1; y < hp; y++)
+			offsets[y * wp + x] = find_corner(points[y * wp + x] + offsets[(y - 1) * wp + x], corners) - points[y * wp + x];
+		for (int y = hp / 2 - 1; y >= 0; y--)
+			offsets[y * wp + x] = find_corner(points[y * wp + x] + offsets[(y + 1) * wp + x], corners) - points[y * wp + x];
+	}
+	for (int x = wp / 2 - 1; x >= 0; x--) {
+		offsets[hp / 2 * wp + x] = find_corner(points[hp / 2 * wp + x] + offsets[hp / 2 * wp + x + 1], corners) - points[hp / 2 * wp + x];
+		for (int y = hp / 2 + 1; y < hp; y++)
+			offsets[y * wp + x] = find_corner(points[y * wp + x] + offsets[(y - 1) * wp + x], corners) - points[y * wp + x];
+		for (int y = hp / 2 - 1; y >= 0; y--)
+			offsets[y * wp + x] = find_corner(points[y * wp + x] + offsets[(y + 1) * wp + x], corners) - points[y * wp + x];
 	}
 
-	for (int y = 0; y + 1 < hl.size(); y++) {
-		for (int x = 0; x + 1 < vl.size(); x++) {
-			vec3 u1(find_corner(intersect_lines(vl[x], hl[y] + vec2(M_PI / 2.f, 0.f)) + o, corners), 1.f);
-			vec3 u2(find_corner(intersect_lines(vl[x + 1], hl[y] + vec2(M_PI / 2.f, 0.f)) + o, corners), 1.f);
-			vec3 u3(find_corner(intersect_lines(vl[x + 1], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o, corners), 1.f);
-			vec3 u4(find_corner(intersect_lines(vl[x], hl[y + 1] + vec2(M_PI / 2.f, 0.f)) + o, corners), 1.f);
+	for (int y = 0; y < hp; y++)
+		for (int x = 0; x + 1 < wp; x++)
+			lines.emplace_back(points[y * wp + x] + offsets[y * wp + x], points[y * wp + x + 1] + offsets[y * wp + x + 1]);
+	for (int y = 0; y + 1 < hp; y++)
+		for (int x = 0; x < wp; x++)
+			lines.emplace_back(points[y * wp + x] + offsets[y * wp + x], points[(y + 1) * wp + x] + offsets[(y + 1) * wp + x]);
+
+	for (int y = 0; y + 1 < hp; y++) {
+		for (int x = 0; x + 1 < wp; x++) {
+			vec3 u1(points[y * wp + x] + offsets[y * wp + x], 1.f);
+			vec3 u2(points[y * wp + x + 1] + offsets[y * wp + x + 1], 1.f);
+			vec3 u3(points[(y + 1) * wp + x + 1] + offsets[(y + 1) * wp + x + 1], 1.f);
+			vec3 u4(points[(y + 1) * wp + x] + offsets[(y + 1) * wp + x], 1.f);
 
 			if (length(u4 - u1) + length(u3 - u2) == 0.f)
 				continue;
