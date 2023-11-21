@@ -34,6 +34,9 @@ void Fields::separate() {
 	vector<float> values(w * h);
 	vector<int> ind(values.size());
 
+	if (values.size() == 0)
+		return;
+
 	for (int i = 0; i < values.size(); i++)
 		values[i] = field[i];
 
@@ -137,8 +140,8 @@ void ListProc::scan(vector<uint8_t>& l, int32_t width, int32_t height) {
 	swap(input, l);
 	input.resize(w * h);
 
-	ifstream file("/storage/emulated/0/Download/img.480.ubyte");
-	file.read((char*)input.data(), input.size());
+	//ifstream file("/storage/emulated/0/Download/img.480.ubyte");
+	//file.read((char*)input.data(), input.size());
 
 	worker = thread(&ListProc::process, this);
 }
@@ -299,9 +302,9 @@ void ListProc::process() {
 	auto vl = filter(vlines);
 	auto hl = filter(hlines);
 
-	size_t wp = vl.size(), hp = hl.size();
+	int wp = vl.size(), hp = hl.size();
 	lines.clear();
-	fields.resize((int)wp - 1, (int)hp - 1);
+	fields.resize(wp - 1, hp - 1);
 	if (wp * hp == 0)
 		return;
 	vector<vec2> points(wp * hp), offsets(wp * hp);
