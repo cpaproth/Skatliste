@@ -57,6 +57,8 @@ public:
 	void scan(std::vector<uint8_t>&, int32_t, int32_t);
 	bool result(Lines&, Fields&);
 
+	void get_input(std::function<void(void*, int, int)> f) {f(input.data(), w, h);}
+
 private:
 	int32_t w = 0;
 	int32_t h = 0;
@@ -72,5 +74,6 @@ private:
 	Fields fields;
 
 	std::vector<vec2> filter(std::vector<int>&);
+	vec2 find_corner(const vec2&, const std::vector<int>&);
 	void process();
 };
