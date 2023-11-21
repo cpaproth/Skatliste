@@ -37,11 +37,11 @@ void Program::draw() {
 
 		if (fields.select()) {
 			glBindTexture(GL_TEXTURE_2D, dig_tex);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields.w(), fields.h(), 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields.data());
-			ImGui::Image((void*)(intptr_t)dig_tex, {fields.w() * 4.f, fields.h() * 4.f});
-			ImGui::InputInt("FieldX", &fields.x);
-			ImGui::InputInt("FieldY", &fields.y);
-			ImGui::InputInt("FieldD", &fields.d);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields.W(), fields.H(), 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields.data());
+			ImGui::Image((void*)(intptr_t)dig_tex, {fields.W() * 4.f, fields.H() * 4.f});
+			ImGui::InputInt("FieldX", &fields.X);
+			ImGui::InputInt("FieldY", &fields.Y);
+			ImGui::InputInt("FieldD", &fields.D);
 		}
 	}
 	ImGui::End();

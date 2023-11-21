@@ -15,34 +15,21 @@ vec2 intersect_lines(const vec2&, const vec2&);
 
 class Fields {
 public:
-	int x = 0;
-	int y = 0;
-	int d = 0;
+	int X = 0;
+	int Y = 0;
+	int D = 0;
 	void resize(int w, int h) {
 		width = std::max(0, w);
 		height = std::max(0, h);
 		fields.clear();
 		fields.resize(width * height);
 	}
-	bool select(float s = 0.f, int x_ = -1, int y_ = -1, int d_ = -1) {
-		x = linalg::clamp(x_ < 0? x: x_, 0, width - 1);
-		y = linalg::clamp(y_ < 0? y: y_, 0, height - 1);
-		cur = y * width + x;
-		if (cur < 0 || cur >= fields.size())
-			return false;
-		d = linalg::clamp(d_ < 0? d: d_, 0, fields[cur].chars.size());
-		if (s > 0.f)
-			fields[cur].all.resize(size * ceil(s * size));
-		return true;
-	}
-	void newchar() {
-		d = fields[cur].chars.size() + 1;
-		fields[cur].chars.emplace_back(w() * h());
-	}
-	int w() {return d > 0? size / 5 * 4: fields[cur].all.size() / size;}
-	int h() {return size;}
-	uint8_t* data() {return d > 0? fields[cur].chars[d - 1].data(): fields[cur].all.data();}
-	uint8_t& operator()(int x_, int y_) {return data()[y_ * w() + x_];}
+	bool select(float = 0.f, int = -1, int = -1, int = -1);
+	void separate();
+	int W() {return D > 0? size / 5 * 4: fields[cur].all.size() / size;}
+	int H() {return size;}
+	uint8_t* data() {return D > 0? fields[cur].chars[D - 1].data(): fields[cur].all.data();}
+	uint8_t& operator()(int x, int y) {return data()[y * W() + x];}
 private:
 	struct Field {
 		std::vector<uint8_t> all;

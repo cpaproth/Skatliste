@@ -13,6 +13,108 @@ vec2 intersect_lines(const vec2& l1, const vec2& l2) {
 	return mul(inverse(mat2({cosf(l1.x), cosf(l2.x)}, {sinf(l1.x), sinf(l2.x)})), vec2(l1.y, l2.y));
 }
 
+bool Fields::select(float s, int x, int y, int d) {
+	X = linalg::clamp(x < 0? X: x, 0, width - 1);
+	Y = linalg::clamp(y < 0? Y: y, 0, height - 1);
+	cur = Y * width + X;
+	if (cur < 0 || cur >= fields.size())
+		return false;
+	D = linalg::clamp(d < 0? D: d, 0, (int)fields[cur].chars.size());
+	if (s > 0.f)
+		fields[cur].all.resize(size * ceil(s * size));
+	return true;
+}
+
+void Fields::separate() {
+	D = 0;
+	fields[cur].chars.clear();
+
+	int w = W(), h = H(), md = h / 2;
+	uint8_t* field = data();
+	vector<float> values(w * h);
+	vector<int> ind(values.size());
+
+	for (int i = 0; i < values.size(); i++)
+		values[i] = field[i];
+
+	for (int y = 1; y <= md; y++) {
+		for (int x = 0; x < w; x++) {
+			float* p = max_element(&values[(y - 1) * w + (x > 0? x - 1: x)], &values[(y - 1) * w + (x + 1 < w? x + 1: x)] + 1);
+			values[y * w + x] += *p;
+			ind[(y - 1) * w + x] = x + (p - &values[(y - 1) * w + x]);
+		}
+	}
+	for (int y = h - 2; y >= md; y--) {
+		for (int x = 0; x < w; x++) {
+			float* p = max_element(&values[(y + 1) * w + (x > 0? x - 1: x)], &values[(y + 1) * w + (x + 1 < w? x + 1: x)] + 1);
+			values[y * w + x] += *p;
+			ind[(y + 1) * w + x] = x + (p - &values[(y + 1) * w + x]);
+		}
+	}
+
+	vector<pair<int, float>> mf;
+	mf.emplace_back(0, values[md * w]);
+	for (int x = 1; x + 1 < w; x++) {
+		float& f = values[md * w + x];
+		if ((f < mf.back().second || f > values[md * w + x + 1]) && (f > mf.back().second || f < values[md * w + x + 1]))
+			mf.emplace_back(x, f);
+	}
+	mf.emplace_back(w - 1, values[md * w + w - 1]);
+
+	for (int i = 0; i + 3 < mf.size(); i++) {
+		float mii = min(mf[i + 1].second, mf[i + 2].second);
+		float mio = min(mf[i].second, mf[i + 3].second);
+		float mai = max(mf[i + 1].second, mf[i + 2].second);
+		float mao = max(mf[i].second, mf[i + 3].second);
+		if (mii >= mio && mai <= mao && mao - mio >= 8.f * (mai - mii)) {
+			mf.erase(mf.begin() + i + 2);
+			mf.erase(mf.begin() + i + 1);
+			i = -1;
+		}
+	}
+	if (mf.size() > 1 && mf[0].second <= mf[1].second)
+		mf.erase(mf.begin());
+	if (mf.size() > 1 && mf[mf.size() - 1].second <= mf[mf.size() - 2].second)
+		mf.pop_back();
+	for (int i = 0; i + 4 < mf.size(); i += 2) {
+		float dol = mf[i].second - mf[i + 3].second;
+		float dor = mf[i + 4].second - mf[i + 1].second;
+		float dil = mf[i + 2].second - mf[i + 1].second;
+		float dir = mf[i + 2].second - mf[i + 3].second;
+		if (mf[i + 3].first - mf[i + 1].first < md && (dol + dor >= 2.f * (dil + dir) || dol >= 4.f * dil || dor >= 4.f * dir)) {
+			mf[i + 2].first = lround((dil * mf[i + 1].first + dir * mf[i + 3].first) / (dil + dir));
+			mf[i + 2].second = min(mf[i + 1].second, mf[i + 3].second);
+			mf.erase(mf.begin() + i + 3);
+			mf.erase(mf.begin() + i + 1);
+			i = -2;
+		}
+	}
+
+	for (int i = 1; i + 1 < mf.size(); i += 2) {
+		D = fields[cur].chars.size() + 1;
+		fields[cur].chars.emplace_back(W() * H());
+
+		vector<int> l(h), r(h);
+		l[md] = mf[i - 1].first;
+		r[md] = mf[i + 1].first;
+		for (int y = md; y > 0; y--) {
+			l[y - 1] = ind[(y - 1) * w + l[y]];
+			r[y - 1] = ind[(y - 1) * w + r[y]];
+		}
+		for (int y = md; y + 1 < h; y++) {
+			l[y + 1] = ind[(y + 1) * w + l[y]];
+			r[y + 1] = ind[(y + 1) * w + r[y]];
+		}
+
+		for (int y = 0; y < H(); y++) {
+			for (int x = 0; x < W(); x++) {
+				int xd = mf[i].first + x < l[y] + W() / 2? l[y]: mf[i].first + x > r[y] + W() / 2? r[y]: mf[i].first + x - W() / 2;
+				operator()(x, y) = field[y * w + xd];
+			}
+		}
+	}
+}
+
 ListProc::ListProc() : finished(false), cosa(angs), sina(angs) {
 	for (int a = 0; a < angs; a++) {
 		float ang = (float(a) - (angs - 1) / 2.f) * 0.01f;
@@ -187,16 +289,16 @@ void ListProc::process() {
 			fields.select((length(u2 - u1) + length(u3 - u4)) / (length(u4 - u1) + length(u3 - u2)), x, y);
 
 			vec3 v1(0.f, 0.f, 1.f);
-			vec3 v2(fields.w() - 1.f, 0.f, 1.f);
-			vec3 v3(fields.w() - 1.f, fields.h() - 1.f, 1.f);
-			vec3 v4(0.f, fields.h() - 1.f, 1.f);
+			vec3 v2(fields.W() - 1.f, 0.f, 1.f);
+			vec3 v3(fields.W() - 1.f, fields.H() - 1.f, 1.f);
+			vec3 v4(0.f, fields.H() - 1.f, 1.f);
 
 			vec3 u = mul(inverse(mat3(u1, u2, u3)), u4);
 			vec3 v = mul(inverse(mat3(v1, v2, v3)), v4);
 			mat3 m = mul(mat3(u1 * u.x, u2 * u.y, u3 * u.z), inverse(mat3(v1 * v.x, v2 * v.y, v3 * v.z)));
 
-			for (int yf = 0; yf < fields.h(); yf++) {
-				for (int xf = 0; xf < fields.w(); xf++) {
+			for (int yf = 0; yf < fields.H(); yf++) {
+				for (int xf = 0; xf < fields.W(); xf++) {
 					vec3 r = mul(m, vec3(xf, yf, 1.f));
 					r.x = clamp(r.x / r.z, 0.f, float(w - 1));
 					r.y = clamp(r.y / r.z, 0.f, float(h - 1));
@@ -216,95 +318,7 @@ void ListProc::process() {
 				}
 			}
 
-
-			//separate chars
-
-			int wf = fields.w(), hf = fields.h(), md = hf / 2;
-			uint8_t* field = fields.data();
-			vector<float> values(wf * hf);
-			vector<int> ind(values.size());
-
-			for (int i = 0; i < values.size(); i++)
-				values[i] = field[i];
-
-			for (int yf = 1; yf <= md; yf++) {
-				for (int xf = 0; xf < wf; xf++) {
-					float* p = max_element(&values[(yf - 1) * wf + (xf > 0? xf - 1: xf)], &values[(yf - 1) * wf + (xf + 1 < wf? xf + 1: xf)] + 1);
-					values[yf * wf + xf] += *p;
-					ind[(yf - 1) * wf + xf] = xf + (p - &values[(yf - 1) * wf + xf]);
-				}
-			}
-			for (int yf = hf - 2; yf >= md; yf--) {
-				for (int xf = 0; xf < wf; xf++) {
-					float* p = max_element(&values[(yf + 1) * wf + (xf > 0? xf - 1: xf)], &values[(yf + 1) * wf + (xf + 1 < wf? xf + 1: xf)] + 1);
-					values[yf * wf + xf] += *p;
-					ind[(yf + 1) * wf + xf] = xf + (p - &values[(yf + 1) * wf + xf]);
-				}
-			}
-
-			vector<pair<int, float>> mf;
-			mf.emplace_back(0, values[md * wf]);
-			for (int xf = 1; xf + 1 < wf; xf++) {
-				float& f = values[md * wf + xf];
-				if ((f < mf.back().second || f > values[md * wf + xf + 1]) && (f > mf.back().second || f < values[md * wf + xf + 1]))
-					mf.emplace_back(xf, f);
-			}
-			mf.emplace_back(wf - 1, values[md * wf + wf - 1]);
-
-
-			for (int i = 0; i + 3 < mf.size(); i++) {
-				float mii = min(mf[i + 1].second, mf[i + 2].second);
-				float mio = min(mf[i].second, mf[i + 3].second);
-				float mai = max(mf[i + 1].second, mf[i + 2].second);
-				float mao = max(mf[i].second, mf[i + 3].second);
-				if (mii >= mio && mai <= mao && mao - mio >= 8.f * (mai - mii)) {
-					mf.erase(mf.begin() + i + 2);
-					mf.erase(mf.begin() + i + 1);
-					i = -1;
-				}
-			}
-			if (mf.size() > 1 && mf[0].second <= mf[1].second)
-				mf.erase(mf.begin());
-			if (mf.size() > 1 && mf[mf.size() - 1].second <= mf[mf.size() - 2].second)
-				mf.pop_back();
-			for (int i = 0; i + 4 < mf.size(); i += 2) {
-				float dol = mf[i].second - mf[i + 3].second;
-				float dor = mf[i + 4].second - mf[i + 1].second;
-				float dil = mf[i + 2].second - mf[i + 1].second;
-				float dir = mf[i + 2].second - mf[i + 3].second;
-				if (mf[i + 3].first - mf[i + 1].first < md && (dol + dor >= 2.f * (dil + dir) || dol >= 4.f * dil || dor >= 4.f * dir)) {
-					mf[i + 2].first = (dil * mf[i + 1].first + dir * mf[i + 3].first) / (dil + dir) + 0.5f;
-					mf[i + 2].second = min(mf[i + 1].second, mf[i + 3].second);
-					mf.erase(mf.begin() + i + 3);
-					mf.erase(mf.begin() + i + 1);
-					i = -2;
-				}
-			}
-
-			for (int i = 1; i + 1 < mf.size(); i += 2) {
-				fields.newchar();
-
-				vector<int> l(hf), r(hf);
-				l[md] = mf[i - 1].first;
-				r[md] = mf[i + 1].first;
-				for (int yf = md; yf > 0; yf--) {
-					l[yf - 1] = ind[(yf - 1) * wf + l[yf]];
-					r[yf - 1] = ind[(yf - 1) * wf + r[yf]];
-				}
-				for (int yf = md; yf + 1 < hf; yf++) {
-					l[yf + 1] = ind[(yf + 1) * wf + l[yf]];
-					r[yf + 1] = ind[(yf + 1) * wf + r[yf]];
-				}
-
-				for (int yf = 0; yf < fields.h(); yf++) {
-					for (int xf = 0; xf < fields.w(); xf++) {
-						int xd = mf[i].first + xf < l[yf] + fields.w() / 2? l[yf]: mf[i].first + xf > r[yf] + fields.w() / 2? r[yf]: mf[i].first + xf - fields.w() / 2;
-						fields(xf, yf) = field[yf * wf + xd];
-					}
-				}
-			}
-
-
+			fields.separate();
 		}
 	}
 
