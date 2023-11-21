@@ -65,8 +65,9 @@ public:
 	void scan(std::vector<uint8_t>&, int32_t, int32_t);
 	bool result(Lines&, Fields&);
 
+	void get_input(std::function<void(void*, int, int)> f) {f(input.data(), w, h);}
+
 private:
-public:
 	int32_t w = 0;
 	int32_t h = 0;
 	static const int angs = 21;

@@ -25,11 +25,11 @@ Program::~Program() {
 
 void Program::draw() {
 
-	if (ImGui::Begin("Skatliste")) {
+	if (ImGui::Begin("Skat List")) {
 		if (ImGui::Button(cam.cap()? "Stop": "Scan"))
 			cam.cap()? cam.stop(): cam.start();
 		ImGui::SameLine();
-		if (ImGui::Button("Lerne")) {
+		if (ImGui::Button("Learn")) {
 
 		}
 		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
@@ -45,12 +45,13 @@ void Program::draw() {
 	}
 	ImGui::End();
 
-
 	using namespace placeholders;
 
 	glBindTexture(GL_TEXTURE_2D, cap_tex);
-	cam.get_rgba(bind(glTexImage2D, GL_TEXTURE_2D, 0, GL_RGBA, _2, _3, 0, GL_RGBA, GL_UNSIGNED_BYTE, _1));
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, proc.w, proc.h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, proc.input.data());
+	if (cam.cap())
+		cam.get_rgba(bind(glTexImage2D, GL_TEXTURE_2D, 0, GL_RGBA, _2, _3, 0, GL_RGBA, GL_UNSIGNED_BYTE, _1));
+	else
+		proc.get_input(bind(glTexImage2D, GL_TEXTURE_2D, 0, GL_LUMINANCE, _2, _3, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, _1));
 
 	auto s = ImGui::GetMainViewport()->Size;
 	float w = float(cam.w()), h = float(cam.h()), f = s.x * h < s.y * w? s.x / w: s.y / h;
