@@ -336,12 +336,13 @@ void ListProc::process() {
 		for (int x = 0; x < wp; x++)
 			lines.emplace_back(points[y * wp + x] + offsets[y * wp + x], points[(y + 1) * wp + x] + offsets[(y + 1) * wp + x]);
 
+	float f = big_chars? 1.f: 0.f;
 	for (int y = 0; y + 1 < hp; y++) {
 		for (int x = 0; x + 1 < wp; x++) {
-			vec3 u1(points[y * wp + x] + offsets[y * wp + x], 1.f);
-			vec3 u2(points[y * wp + x + 1] + offsets[y * wp + x + 1], 1.f);
-			vec3 u3(points[(y + 1) * wp + x + 1] + offsets[(y + 1) * wp + x + 1], 1.f);
-			vec3 u4(points[(y + 1) * wp + x] + offsets[(y + 1) * wp + x], 1.f);
+			vec3 u1(points[y * wp + x] + offsets[y * wp + x] + vec2(-f, -f), 1.f);
+			vec3 u2(points[y * wp + x + 1] + offsets[y * wp + x + 1] + vec2(f, -f), 1.f);
+			vec3 u3(points[(y + 1) * wp + x + 1] + offsets[(y + 1) * wp + x + 1] + vec2(f, f), 1.f);
+			vec3 u4(points[(y + 1) * wp + x] + offsets[(y + 1) * wp + x] + vec2(-f, f), 1.f);
 
 			if (length(u4 - u1) + length(u3 - u2) == 0.f)
 				continue;

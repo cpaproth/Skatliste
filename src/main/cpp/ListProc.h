@@ -50,6 +50,7 @@ public:
 
 	int edge_th = 10;
 	int line_th = 50;
+	bool big_chars = false;
 
 	ListProc();
 	~ListProc();

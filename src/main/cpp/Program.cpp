@@ -25,13 +25,19 @@ Program::~Program() {
 
 void Program::draw() {
 
-	if (ImGui::Begin("Skat List")) {
+	static bool learn = false;
+	ImGui::Begin("Skat List", learn? &learn: 0);
+	if (!learn) {
 		if (ImGui::Button(cam.cap()? "Stop": "Scan"))
 			cam.cap()? cam.stop(): cam.start();
 		ImGui::SameLine();
-		if (ImGui::Button("Learn")) {
-
+		if (!cam.cap() && fields.select()) {
+			if (ImGui::Button("Learn"))
+				learn = true;
+		} else {
+			ImGui::Checkbox("Big", &proc.big_chars);
 		}
+
 		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
 		ImGui::SliderInt("Line", &proc.line_th, 1, 100);
 
@@ -43,6 +49,8 @@ void Program::draw() {
 			ImGui::InputInt("FieldY", &fields.Y);
 			ImGui::InputInt("FieldD", &fields.D);
 		}
+	} else {
+
 	}
 	ImGui::End();
 
