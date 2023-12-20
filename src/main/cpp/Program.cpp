@@ -32,8 +32,10 @@ void Program::draw() {
 			cam.cap()? cam.stop(): cam.start();
 		ImGui::SameLine();
 		if (!cam.cap() && fields.select()) {
-			if (ImGui::Button("Learn"))
+			if (ImGui::Button("Learn")) {
 				learn = true;
+				fields.first();
+			}
 		} else {
 			ImGui::Checkbox("Big", &proc.big_chars);
 		}
@@ -50,6 +52,29 @@ void Program::draw() {
 			ImGui::InputInt("FieldD", &fields.D);
 		}
 	} else {
+		if (fields.select()) {
+			glBindTexture(GL_TEXTURE_2D, dig_tex);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields.W(), fields.H(), 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields.data());
+			ImGui::Image((void*)(intptr_t)dig_tex, {fields.W() * 10.f, fields.H() * 10.f});
+		}
+		ImGui::SameLine();
+		ImGui::BeginGroup();
+		if (ImGui::Button("Ignore Row"))
+			fields.ignore_row();
+		if (ImGui::Button("Ignore Column"))
+			fields.ignore_col();
+		if (ImGui::Button("Ignore"))
+			learn = fields.next();
+		ImGui::EndGroup();
+
+		const char* chars[15] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "+", "x", "|", " "};
+		int val = -1;
+		for (int i = 0; i < 15; i++) {
+			if (i % 5 != 0)
+				ImGui::SameLine();
+			if (ImGui::Button(chars[i], {70, 70}))
+				val = i;
+		}
 
 	}
 	ImGui::End();
@@ -71,7 +96,8 @@ void Program::draw() {
 
 	if (proc.result(lines, fields))
 		cam.stop();
+	int pos = 0;
 	for (auto& l : lines)
-		ImGui::GetBackgroundDrawList()->AddLine({f * l.x.x, f * l.x.y}, {f * l.y.x, f * l.y.y}, 0xff0000ff);
+		ImGui::GetBackgroundDrawList()->AddLine({f * l.x.x, f * l.x.y}, {f * l.y.x, f * l.y.y}, fields.check(pos++)? 0xff00ff00: 0xff0000ff);
 
 }

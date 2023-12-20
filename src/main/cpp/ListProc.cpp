@@ -25,6 +25,27 @@ bool Fields::select(float s, int x, int y, int d) {
 	return true;
 }
 
+void Fields::first() {
+	rows.clear();
+	cols.clear();
+	select(0.f, 0, 0, 1);
+	while (D == 0 && next());
+}
+
+bool Fields::next() {
+	if (D < fields[cur].chars.size()) {
+		D++;
+		return true;
+	} else if (X < width - 1) {
+		select(0.f, X + 1, Y, 1);
+		while ((cols.count(X) > 0 || D == 0) && next());
+	} else if (Y < height - 1) {
+		select(0.f, 0, Y + 1, 1);
+		while ((rows.count(Y) > 0 || D == 0) && next());
+	}
+	return cur < fields.size();
+}
+
 void Fields::separate() {
 	D = 0;
 	fields[cur].chars.clear();
@@ -115,6 +136,11 @@ void Fields::separate() {
 				operator()(x, y) = field[y * w + xd];
 			}
 		}
+
+		float mi = *min_element(data(), data() + W() * H()), ma = *max_element(data(), data() + W() * H());
+		for (int y = 0; y < H(); y++)
+			for (int x = 0; x < W(); x++)
+				operator()(x, y) = (operator()(x, y) - mi) * 255 / max(1, ma - mi);
 	}
 }
 
@@ -140,8 +166,8 @@ void ListProc::scan(vector<uint8_t>& l, int32_t width, int32_t height) {
 	swap(input, l);
 	input.resize(w * h);
 
-	//ifstream file("/storage/emulated/0/Download/img.480.ubyte");
-	//file.read((char*)input.data(), input.size());
+	ifstream file("/storage/emulated/0/Download/img.480.ubyte");
+	file.read((char*)input.data(), input.size());
 
 	worker = thread(&ListProc::process, this);
 }

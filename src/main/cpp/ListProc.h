@@ -1,6 +1,7 @@
 //Copyright (C) 2023 Carsten Paproth - Licensed under MIT License
 
 #include <vector>
+#include <set>
 #include <thread>
 #include <atomic>
 #include "linalg.h"
@@ -24,7 +25,17 @@ public:
 		fields.clear();
 		fields.resize(width * height);
 	}
+	bool check(int p) {
+		if (p < width * (height + 1))
+			return p == Y * width + X || p == (Y + 1) * width + X;
+		p -= width * (height + 1);
+		return p == Y * (width + 1) + X || p == Y * (width + 1) + X + 1;
+	}
 	bool select(float = 0.f, int = -1, int = -1, int = -1);
+	void ignore_row() {rows.insert(Y);}
+	void ignore_col() {cols.insert(X);}
+	void first();
+	bool next();
 	void separate();
 	int W() {return D > 0? size / 5 * 4: fields[cur].all.size() / size;}
 	int H() {return size;}
@@ -42,6 +53,7 @@ private:
 	int width = 0;
 	int height = 0;
 	std::vector<Field> fields;
+	std::set<int> rows, cols;
 };
 
 class ListProc {
