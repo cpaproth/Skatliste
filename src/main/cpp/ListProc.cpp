@@ -146,9 +146,20 @@ void Fields::separate() {
 		}
 
 		uint8_t mi = *min_element(data(), data() + W() * H()), ma = *max_element(data(), data() + W() * H());
-		for (int y = 0; y < H(); y++)
-			for (int x = 0; x < W(); x++)
+		uint8_t cmi = 255, cma = 0;
+		for (int y = 0; y < H(); y++) {
+			for (int x = 0; x < W(); x++) {
 				operator()(x, y) = (operator()(x, y) - mi) * 255 / max(1, ma - mi);
+				if (x > 1 && x < W() - 2 && y > 1 && y < H() - 2) {
+					cmi = min(cmi, operator()(x, y));
+					cma = max(cma, operator()(x, y));
+				}
+			}
+		}
+		if (cma - cmi < 100) {
+			D = fields[cur].chars.size() - 1;
+			fields[cur].chars.pop_back();
+		}
 	}
 }
 
