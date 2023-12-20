@@ -32,9 +32,9 @@ public:
 		return p == Y * (width + 1) + X || p == Y * (width + 1) + X + 1;
 	}
 	bool select(float = 0.f, int = -1, int = -1, int = -1);
-	void ignore_row() {rows.insert(Y);}
-	void ignore_col() {cols.insert(X);}
-	void first();
+	bool ignore_row() {rows.insert(Y); return next();}
+	bool ignore_col() {cols.insert(X); return next();}
+	bool first();
 	bool next();
 	void separate();
 	int W() {return D > 0? size / 5 * 4: fields[cur].all.size() / size;}

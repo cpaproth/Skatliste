@@ -32,10 +32,8 @@ void Program::draw() {
 			cam.cap()? cam.stop(): cam.start();
 		ImGui::SameLine();
 		if (!cam.cap() && fields.select()) {
-			if (ImGui::Button("Learn")) {
-				learn = true;
-				fields.first();
-			}
+			if (ImGui::Button("Learn"))
+				learn = fields.first();
 		} else {
 			ImGui::Checkbox("Big", &proc.big_chars);
 		}
@@ -60,9 +58,9 @@ void Program::draw() {
 		ImGui::SameLine();
 		ImGui::BeginGroup();
 		if (ImGui::Button("Ignore Row"))
-			fields.ignore_row();
+			learn = fields.ignore_row();
 		if (ImGui::Button("Ignore Column"))
-			fields.ignore_col();
+			learn = fields.ignore_col();
 		if (ImGui::Button("Ignore"))
 			learn = fields.next();
 		ImGui::EndGroup();

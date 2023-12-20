@@ -25,25 +25,33 @@ bool Fields::select(float s, int x, int y, int d) {
 	return true;
 }
 
-void Fields::first() {
+bool Fields::first() {
 	rows.clear();
 	cols.clear();
-	select(0.f, 0, 0, 1);
-	while (D == 0 && next());
+	select(0.f, 0, 0, 0);
+	return next();
 }
 
 bool Fields::next() {
+	while (cols.count(X) > 0 || rows.count(Y) > 0) {
+		if (X == width - 1 && Y == height - 1)
+			return false;
+		if (X < width - 1)
+			select(0.f, X + 1, Y, 0);
+		else
+			select(0.f, 0, Y + 1, 0);
+	}
 	if (D < fields[cur].chars.size()) {
 		D++;
 		return true;
 	} else if (X < width - 1) {
-		select(0.f, X + 1, Y, 1);
-		while ((cols.count(X) > 0 || D == 0) && next());
+		select(0.f, X + 1, Y, 0);
+		return next();
 	} else if (Y < height - 1) {
-		select(0.f, 0, Y + 1, 1);
-		while ((rows.count(Y) > 0 || D == 0) && next());
+		select(0.f, 0, Y + 1, 0);
+		return next();
 	}
-	return cur < fields.size();
+	return false;
 }
 
 void Fields::separate() {
@@ -137,7 +145,7 @@ void Fields::separate() {
 			}
 		}
 
-		float mi = *min_element(data(), data() + W() * H()), ma = *max_element(data(), data() + W() * H());
+		uint8_t mi = *min_element(data(), data() + W() * H()), ma = *max_element(data(), data() + W() * H());
 		for (int y = 0; y < H(); y++)
 			for (int x = 0; x < W(); x++)
 				operator()(x, y) = (operator()(x, y) - mi) * 255 / max(1, ma - mi);
