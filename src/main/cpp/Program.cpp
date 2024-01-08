@@ -2,6 +2,7 @@
 
 #include "Program.h"
 #include "imgui.h"
+#include <iostream>
 
 using namespace std;
 
@@ -98,4 +99,6 @@ void Program::draw() {
 	for (auto& l : lines)
 		ImGui::GetBackgroundDrawList()->AddLine({f * l.x.x, f * l.x.y}, {f * l.y.x, f * l.y.y}, fields.check(pos++)? 0xff00ff00: 0xff0000ff);
 
+	if (!ImGui::GetIO().WantCaptureMouse && ImGui::GetIO().MouseReleased[0])
+		cout << ImGui::GetIO().MousePos.x << endl;
 }
