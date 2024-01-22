@@ -284,8 +284,8 @@ vector<vec2> ListProc::filter(vector<int>& l) {
 
 vec2 ListProc::find_corner(const vec2& p, const vector<int>& c) {
 	int m = INT_MIN, xm = 0, ym = 0;
-	for (int x = max(2, (int)p.x - 5); x < min(w - 2, (int)p.x + 6); x++) {
-		for (int y = max(2, (int)p.y - 5); y < min(h - 2, (int)p.y + 6); y++) {
+	for (int x = max(2, (int)p.x - 4); x < min(w - 2, (int)p.x + 5); x++) {
+		for (int y = max(2, (int)p.y - 4); y < min(h - 2, (int)p.y + 5); y++) {
 			if (c[y * w + x] > m) {
 				m = c[y * w + x];
 				xm = x;
@@ -307,7 +307,7 @@ vec2 ListProc::find_corner(const vec2& p, const vector<int>& c) {
 		}
 	}
 	vec2 n = vec2((float)xc, (float)yc) / (float)sumc;
-	return length(p - n) < 4.f? n: p;
+	return length(p - n) < 2.f? n: p;
 }
 
 void ListProc::process() {
@@ -379,13 +379,15 @@ void ListProc::process() {
 		for (int x = 0; x < wp; x++)
 			lines.emplace_back(points[y * wp + x], points[(y + 1) * wp + x]);
 
-	float f = big_chars? 1.f: 0.f;
+	float f = big_chars? 0.2f: 0.f;
 	for (int y = 0; y + 1 < hp; y++) {
 		for (int x = 0; x + 1 < wp; x++) {
-			vec3 u1(points[y * wp + x] + vec2(-f, -f), 1.f);
-			vec3 u2(points[y * wp + x + 1] + vec2(f, -f), 1.f);
-			vec3 u3(points[(y + 1) * wp + x + 1] + vec2(f, f), 1.f);
-			vec3 u4(points[(y + 1) * wp + x] + vec2(-f, f), 1.f);
+			vec2 le(points[(y + 1) * wp + x] - points[y * wp + x]);
+			vec2 ri(points[(y + 1) * wp + x + 1] - points[y * wp + x + 1]);
+			vec3 u1(points[y * wp + x] - f * le, 1.f);
+			vec3 u2(points[y * wp + x + 1] - f * ri, 1.f);
+			vec3 u3(points[(y + 1) * wp + x + 1] + f * ri, 1.f);
+			vec3 u4(points[(y + 1) * wp + x] + f * le, 1.f);
 
 			if (length(u4 - u1) + length(u3 - u2) == 0.f)
 				continue;
