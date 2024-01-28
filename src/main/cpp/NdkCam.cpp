@@ -71,6 +71,9 @@ void NdkCam::printprops(const char* id) {
 	if (ACameraMetadata_getConstEntry(metadata, ACAMERA_LENS_FACING, &entry) == ACAMERA_OK)
 		cout << "backfacing: " << (int)entry.data.u8[0] << endl;
 
+	if (ACameraMetadata_getConstEntry(metadata, ACAMERA_FLASH_INFO_AVAILABLE, &entry) == ACAMERA_OK)
+		cout << "flash: " << (int)entry.data.u8[0] << endl;
+
 	ACameraMetadata_free(metadata);
 }
 

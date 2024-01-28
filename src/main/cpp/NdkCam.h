@@ -28,12 +28,15 @@ public:
 		f(lum, width, height);
 	}
 	void start() {
+		ACaptureRequest_setEntry_u8(request, ACAMERA_FLASH_MODE, 1, (uint8_t[]){ACAMERA_FLASH_MODE_TORCH});
 		ACameraCaptureSession_setRepeatingRequest(session, 0, 1, &request, 0);
 		capture = true;
 	}
 	void stop() {
 		capture = false;
 		ACameraCaptureSession_stopRepeating(session);
+		ACaptureRequest_setEntry_u8(request, ACAMERA_FLASH_MODE, 1, (uint8_t[]){ACAMERA_FLASH_MODE_OFF});
+		ACameraCaptureSession_capture(session, 0, 1, &request, 0);
 	}
 
 private:
