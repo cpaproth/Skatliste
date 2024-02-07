@@ -31,6 +31,13 @@ public:
 		p -= width * (height + 1);
 		return p == Y * (width + 1) + X || p == Y * (width + 1) + X + 1;
 	}
+	bool select(int p) {
+		if (p < 0 || width <= 0)
+			return false;
+		int w = p < width * (height + 1)? width: width + 1;
+		p = p < width * (height + 1)? p: p - width * (height + 1);
+		return select(0.f, p % w, p / w, 0);
+	}
 	bool select(float = 0.f, int = -1, int = -1, int = -1);
 	bool ignore_row() {rows.insert(Y); return next();}
 	bool ignore_col() {cols.insert(X); return next();}
