@@ -187,7 +187,7 @@ void ListProc::scan(vector<uint8_t>& l, int32_t width, int32_t height) {
 	input.resize(w * h);
 
 	ifstream file("/storage/emulated/0/Download/img.480.ubyte");
-	//file.read((char*)input.data(), input.size());
+	file.read((char*)input.data(), input.size());
 
 	worker = thread(&ListProc::process, this);
 }
@@ -402,6 +402,7 @@ void ListProc::process() {
 			vec3 v = mul(inverse(mat3(v1, v2, v3)), v4);
 			mat3 m = mul(mat3(u1 * u.x, u2 * u.y, u3 * u.z), inverse(mat3(v1 * v.x, v2 * v.y, v3 * v.z)));
 
+			uint8_t mi = 255, ma = 0;
 			for (int yf = 0; yf < fields.H(); yf++) {
 				for (int xf = 0; xf < fields.W(); xf++) {
 					vec3 r = mul(m, vec3(xf, yf, 1.f));
@@ -420,8 +421,13 @@ void ListProc::process() {
 					float val = (1.f - wx) * (1.f - wy) * m0 + wx * (1.f - wy) * m1 + (1.f - wx) * wy * m2 + wx * wy * m3;
 
 					fields(xf, yf) = (uint8_t)clamp(val, 0.f, 255.f);
+					mi = min(mi, fields(xf, yf));
+					ma = max(ma, fields(xf, yf));
 				}
 			}
+			for (int yf = 0; yf < fields.H(); yf++)
+				for (int xf = 0; xf < fields.W(); xf++)
+					fields(xf, yf) = (uint8_t)clamp((fields(xf, yf) - mi) * 255.f / (ma - mi), 0.f, 255.f);
 
 			fields.separate();
 		}
