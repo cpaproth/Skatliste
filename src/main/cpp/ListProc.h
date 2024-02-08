@@ -44,6 +44,7 @@ public:
 	bool first();
 	bool next();
 	void separate();
+	void separate2();
 	int W() {return D > 0? size / 5 * 4: fields[cur].all.size() / size;}
 	int H() {return size;}
 	uint8_t* data() {return D > 0? fields[cur].chars[D - 1].data(): fields[cur].all.data();}

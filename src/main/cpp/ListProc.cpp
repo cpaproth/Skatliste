@@ -164,6 +164,79 @@ void Fields::separate() {
 	}
 }
 
+void Fields::separate2() {
+	D = 0;
+	fields[cur].chars.clear();
+
+	int w = W(), h = H(), wd = h / 5 * 4, s = 3, count = 0;
+	uint8_t* field = data();
+	vector<float> avg(w, 0.f), var(w, 0.f);;
+	vector<int> splits;
+
+	if (w * h == 0)
+		return;
+
+	for (int x = 0; x < w; x++) {
+		for (int y = 0; y < h; y++)
+			avg[x] += field[y * w + x];
+		for (int y = 1; y < h; y++)
+			var[x] += pow(field[y * w + x] / 255.f - field[(y - 1) * w + x] / 255.f, 2.f);
+	}
+
+	for (int x = 1; x + 1 < w; x++)
+		if (avg[x] >= avg[x - 1] && avg[x] > avg[x + 1])
+			splits.push_back(x);
+
+	while (splits.size() > 0) {
+		float diff = -1.f;
+		int pos = 0;
+		for (int i = 0; i + 1 < splits.size(); i++) {
+			float d = abs(var[splits[i + 1]] - var[splits[i]]) / (splits[i + 1] - splits[i]);
+			if (d > diff && (splits[i + 1] - splits[i] <= wd / 2 || d > 0.05f || count > 0)) {
+				diff = d;
+				pos = i;
+			}
+		}
+		if (diff < 0.f)
+			break;
+		if (count > 0 && diff <= 0.05f && splits[pos + 1] - splits[pos] > wd / 2)
+			count--;
+		if (var[splits[pos + 1]] > var[splits[pos]])
+			pos++;
+		splits.erase(splits.begin() + pos);
+	}
+
+	for (int i = 0; i + 1 < splits.size(); i++) {
+		float mi = 255.f, ma = 0.f, sum = 0.f, cent = 0.f;
+		for (int y = s; y + s < h; y++) {
+			for (int x = splits[i] + 1; x < splits[i + 1]; x++) {
+				mi = min(mi, field[y * w + x]);
+				ma = max(ma, field[y * w + x]);
+			}
+		}
+		for (int y = s; y + s < h; y++) {
+			for (int x = splits[i] + 1; x < splits[i + 1]; x++) {
+				cent += x * (ma - field[y * w + x]);
+				sum += ma - field[y * w + x];
+			}
+		}
+		if (ma - mi < 100.f)
+			continue;
+
+		D = fields[cur].chars.size() + 1;
+		fields[cur].chars.emplace_back(wd * h);
+
+		int o = (int)(cent / sum - (wd - 1.f) / 2.f + 0.5f);
+		for (int y = 0; y < h; y++) {
+			for (int x = 0; x < wd; x++) {
+				float val = x + o < 0 || x + o >= w? 1.f: y >= s && y + s < h? (field[y * w + x + o] - mi) / (ma - mi): field[y * w + x + o] / 255.f;
+				float weight = min(1.f, -0.2f * min({0.f, x + o - 1.f - splits[i], splits[i + 1] - 1.f - x - o}));
+				operator()(x, y) = clamp((1.f - weight) * val + weight, 0.f, 1.f) * 255.f;
+			}
+		}
+	}
+}
+
 ListProc::ListProc() : finished(false), cosa(angs), sina(angs) {
 	for (int a = 0; a < angs; a++) {
 		float ang = (float(a) - (angs - 1) / 2.f) * 0.01f;
@@ -429,7 +502,7 @@ void ListProc::process() {
 				for (int xf = 0; xf < fields.W(); xf++)
 					fields(xf, yf) = (uint8_t)clamp((fields(xf, yf) - mi) * 255.f / (ma - mi), 0.f, 255.f);
 
-			fields.separate();
+			fields.separate2();
 		}
 	}
 }

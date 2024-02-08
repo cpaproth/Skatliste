@@ -99,7 +99,7 @@ void Program::draw() {
 	for (auto& l : lines)
 		ImGui::GetBackgroundDrawList()->AddLine({f * l.x.x, f * l.x.y}, {f * l.y.x, f * l.y.y}, fields.check(pos++)? 0xff00ff00: 0xff0000ff);
 
-	if (!ImGui::GetIO().WantCaptureMouse && ImGui::GetIO().MouseClicked[0]) {
+	if (!ImGui::GetIO().WantCaptureMouse && ImGui::GetIO().MouseClicked[0] && ImGui::GetIO().MousePos.y / f < h) {
 		float l = FLT_MAX;
 		pos = 0;
 		vec2 mouse(ImGui::GetIO().MousePos.x / f, ImGui::GetIO().MousePos.y / f);
