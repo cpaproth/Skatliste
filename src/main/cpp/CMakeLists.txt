@@ -12,5 +12,5 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_o
 
 include_directories(ext ${ANDROID_NDK}/sources/android/native_app_glue)
 
-add_library(${PROJECT_NAME} SHARED main.cpp Program.cpp NdkCam.cpp ListProc.cpp)
+add_library(${PROJECT_NAME} SHARED main.cpp Program.cpp NdkCam.cpp ListProc.cpp Classifier.cpp)
 target_link_libraries(${PROJECT_NAME} android native_app_glue GLESv3 EGL log camera2ndk mediandk imgui)

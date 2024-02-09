@@ -1,4 +1,4 @@
-//Copyright (C) 2023 Carsten Paproth - Licensed under MIT License
+//Copyright (C) 2023, 2024 Carsten Paproth - Licensed under MIT License
 
 template<class T> struct Guard {
 	T f;

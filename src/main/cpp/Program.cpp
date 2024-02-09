@@ -1,4 +1,4 @@
-//Copyright (C) 2023 Carsten Paproth - Licensed under MIT License
+//Copyright (C) 2023, 2024 Carsten Paproth - Licensed under MIT License
 
 #include "Program.h"
 #include "imgui.h"
@@ -113,4 +113,8 @@ void Program::draw() {
 		fields.select(pos);
 		learn = learn? fields.next(): learn;
 	}
+	if (ImGui::Button("Separate1"))
+		fields.separate();
+	if (ImGui::Button("Separate2"))
+		fields.separate2();
 }

@@ -1,9 +1,10 @@
-//Copyright (C) 2023 Carsten Paproth - Licensed under MIT License
+//Copyright (C) 2023, 2024 Carsten Paproth - Licensed under MIT License
 
 #include <GLES3/gl3.h>
 
 #include "NdkCam.h"
 #include "ListProc.h"
+#include "Classifier.h"
 
 class Program {
 public:

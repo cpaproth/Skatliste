@@ -1,4 +1,4 @@
-//Copyright (C) 2023 Carsten Paproth - Licensed under MIT License
+//Copyright (C) 2023, 2024 Carsten Paproth - Licensed under MIT License
 
 #define CNFG_IMPLEMENTATION
 #include "CNFG.h"
