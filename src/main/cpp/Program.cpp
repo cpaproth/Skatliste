@@ -66,10 +66,10 @@ void Program::draw() {
 			learn = fields.next();
 		ImGui::EndGroup();
 
-		const char* chars[15] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "+", "x", "|", " "};
+		const char* chars[12] = {"7", "8", "9", "4", "5", "6", "1", "2", "3", "0", "+", "-"};
 		int val = -1;
-		for (int i = 0; i < 15; i++) {
-			if (i % 5 != 0)
+		for (int i = 0; i < 12; i++) {
+			if (i % 3 != 0)
 				ImGui::SameLine();
 			if (ImGui::Button(chars[i], {70, 70}))
 				val = i;
@@ -113,8 +113,8 @@ void Program::draw() {
 		fields.select(pos);
 		learn = learn? fields.next(): learn;
 	}
-	if (ImGui::Button("Separate1"))
-		fields.separate();
-	if (ImGui::Button("Separate2"))
-		fields.separate2();
+	if (fields.select() && ImGui::Button("Separate1"))
+		fields.separate(1);
+	if (fields.select() && ImGui::Button("Separate2"))
+		fields.separate(0);
 }

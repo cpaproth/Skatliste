@@ -43,9 +43,8 @@ public:
 	bool ignore_col() {cols.insert(X); return next();}
 	bool first();
 	bool next();
-	void separate();
-	void separate2();
-	int W() {return D > 0? size / 5 * 4: fields[cur].all.size() / size;}
+	void separate(int);
+	int W() {return D > 0? wd: fields[cur].all.size() / size;}
 	int H() {return size;}
 	uint8_t* data() {return D > 0? fields[cur].chars[D - 1].data(): fields[cur].all.data();}
 	uint8_t& operator()(int x, int y) {return data()[y * W() + x];}
@@ -57,11 +56,15 @@ private:
 		int value;
 	};
 	static const int size = 15;
+	static const int wd = size / 5 * 4;
 	int cur = 0;
 	int width = 0;
 	int height = 0;
 	std::vector<Field> fields;
 	std::set<int> rows, cols;
+	void sep_mode0(int, int, uint8_t*);
+	void sep_mode1(int, int, uint8_t*);
+	void sep_mode2(int, int, uint8_t*);
 };
 
 class ListProc {

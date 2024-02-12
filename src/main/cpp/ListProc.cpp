@@ -15,12 +15,12 @@ vec2 intersect_lines(const vec2& l1, const vec2& l2) {
 }
 
 bool Fields::select(float s, int x, int y, int d) {
-	X = linalg::clamp(x < 0? X: x, 0, width - 1);
-	Y = linalg::clamp(y < 0? Y: y, 0, height - 1);
+	X = clamp(x < 0? X: x, 0, width - 1);
+	Y = clamp(y < 0? Y: y, 0, height - 1);
 	cur = Y * width + X;
 	if (cur < 0 || cur >= fields.size())
 		return false;
-	D = linalg::clamp(d < 0? D: d, 0, (int)fields[cur].chars.size());
+	D = clamp(d < 0? D: d, 0, (int)fields[cur].chars.size());
 	if (s > 0.f)
 		fields[cur].all.resize(size * ceil(s * size));
 	return true;
@@ -55,17 +55,108 @@ bool Fields::next() {
 	return false;
 }
 
-void Fields::separate() {
+void Fields::separate(int mode) {
 	D = 0;
 	fields[cur].chars.clear();
 
-	int w = W(), h = H(), md = h / 2;
-	uint8_t* field = data();
+	if (mode == 1)
+		sep_mode1(W(), H(), data());
+	else if (mode == 2)
+		sep_mode2(W(), H(), data());
+	else
+		sep_mode0(W(), H(), data());
+
+	for (D = fields[cur].chars.size(); D > 0; D--) {
+		uint8_t mi = *min_element(data(), data() + W() * H()), ma = *max_element(data(), data() + W() * H());
+		uint8_t cmi = 255, cma = 0;
+		for (int y = 0; y < H(); y++) {
+			for (int x = 0; x < W(); x++) {
+				operator()(x, y) = (operator()(x, y) - mi) * 255 / max(1, ma - mi);
+				if (x > 1 && x < W() - 2 && y > 1 && y < H() - 2) {
+					cmi = min(cmi, operator()(x, y));
+					cma = max(cma, operator()(x, y));
+				}
+			}
+		}
+		if (cma - cmi < 150)
+			fields[cur].chars.erase(fields[cur].chars.begin() + D - 1);
+	}
+}
+
+void Fields::sep_mode0(int w, int h, uint8_t* field) {
+	for (int i = 2; i + wd + 2 <= w; i += 3) {
+		D = fields[cur].chars.size() + 1;
+		fields[cur].chars.emplace_back(wd * h);
+		for (int y = 0; y < h; y++) {
+			for (int x = 0; x < wd; x++) {
+				float val = field[y * w + x + i] / 255.f;
+				float weight = x < 3? 0.5f + x / 6.f: x + 3 >= wd? 0.5f + (wd - 1.f - x) / 6.f: 1.f;
+				operator()(x, y) = clamp(weight * val + 1.f - weight, 0.f, 1.f) * 255.f;
+			}
+		}
+	}
+}
+
+void Fields::sep_mode1(int w, int h, uint8_t* field) {
+	int count = 0;
+	vector<float> avg(w, 0.f), var(w, 0.f);
+	vector<int> splits;
+
+	for (int x = 0; x < w; x++) {
+		for (int y = 0; y < h; y++)
+			avg[x] += field[y * w + x];
+		for (int y = 1; y < h; y++)
+			var[x] += pow(field[y * w + x] / 255.f - field[(y - 1) * w + x] / 255.f, 2.f);
+	}
+
+	for (int x = 1; x + 1 < w; x++)
+		if (avg[x] >= avg[x - 1] && avg[x] > avg[x + 1])
+			splits.push_back(x);
+
+	while (splits.size() > 0) {
+		float diff = -1.f;
+		int pos = 0;
+		for (int i = 0; i + 1 < splits.size(); i++) {
+			float d = abs(var[splits[i + 1]] - var[splits[i]]) / (splits[i + 1] - splits[i]);
+			if (d > diff && (splits[i + 1] - splits[i] <= wd / 2 || d > 0.05f || count > 0)) {
+				diff = d;
+				pos = i;
+			}
+		}
+		if (diff < 0.f)
+			break;
+		if (count > 0 && diff <= 0.05f && splits[pos + 1] - splits[pos] > wd / 2)
+			count--;
+		if (var[splits[pos + 1]] > var[splits[pos]])
+			pos++;
+		splits.erase(splits.begin() + pos);
+	}
+
+	for (int i = 0; i + 1 < splits.size(); i++) {
+		D = fields[cur].chars.size() + 1;
+		fields[cur].chars.emplace_back(wd * h);
+
+		float ma = *max_element(&avg[splits[i]] + 1, &avg[splits[i + 1]]), sum = 0.f, cent = 0.f;
+		for (int x = splits[i] + 1; x < splits[i + 1]; x++) {
+			cent += x * (ma - avg[x]);
+			sum += ma - avg[x];
+		}
+
+		int o = (int)(cent / sum - (wd - 1.f) / 2.f + 0.5f);
+		for (int y = 0; y < h; y++) {
+			for (int x = 0; x < wd; x++) {
+				float val = x + o < 0 || x + o >= w? 1.f: field[y * w + x + o] / 255.f;
+				float weight = min(1.f, -0.2f * min({0.f, x + o - 1.f - splits[i], splits[i + 1] - 1.f - x - o}));
+				operator()(x, y) = clamp((1.f - weight) * val + weight, 0.f, 1.f) * 255.f;
+			}
+		}
+	}
+}
+
+void Fields::sep_mode2(int w, int h, uint8_t* field) {
+	int md = h / 2;
 	vector<float> values(w * h);
 	vector<int> ind(values.size());
-
-	if (values.size() == 0)
-		return;
 
 	for (int i = 0; i < values.size(); i++)
 		values[i] = field[i];
@@ -143,95 +234,6 @@ void Fields::separate() {
 			for (int x = 0; x < W(); x++) {
 				int xd = mf[i].first + x < l[y] + W() / 2? l[y]: mf[i].first + x > r[y] + W() / 2? r[y]: mf[i].first + x - W() / 2;
 				operator()(x, y) = field[y * w + xd];
-			}
-		}
-
-		uint8_t mi = *min_element(data(), data() + W() * H()), ma = *max_element(data(), data() + W() * H());
-		uint8_t cmi = 255, cma = 0;
-		for (int y = 0; y < H(); y++) {
-			for (int x = 0; x < W(); x++) {
-				operator()(x, y) = (operator()(x, y) - mi) * 255 / max(1, ma - mi);
-				if (x > 1 && x < W() - 2 && y > 1 && y < H() - 2) {
-					cmi = min(cmi, operator()(x, y));
-					cma = max(cma, operator()(x, y));
-				}
-			}
-		}
-		if (cma - cmi < 150) {
-			D = fields[cur].chars.size() - 1;
-			fields[cur].chars.pop_back();
-		}
-	}
-}
-
-void Fields::separate2() {
-	D = 0;
-	fields[cur].chars.clear();
-
-	int w = W(), h = H(), wd = h / 5 * 4, s = 3, count = 0;
-	uint8_t* field = data();
-	vector<float> avg(w, 0.f), var(w, 0.f);;
-	vector<int> splits;
-
-	if (w * h == 0)
-		return;
-
-	for (int x = 0; x < w; x++) {
-		for (int y = 0; y < h; y++)
-			avg[x] += field[y * w + x];
-		for (int y = 1; y < h; y++)
-			var[x] += pow(field[y * w + x] / 255.f - field[(y - 1) * w + x] / 255.f, 2.f);
-	}
-
-	for (int x = 1; x + 1 < w; x++)
-		if (avg[x] >= avg[x - 1] && avg[x] > avg[x + 1])
-			splits.push_back(x);
-
-	while (splits.size() > 0) {
-		float diff = -1.f;
-		int pos = 0;
-		for (int i = 0; i + 1 < splits.size(); i++) {
-			float d = abs(var[splits[i + 1]] - var[splits[i]]) / (splits[i + 1] - splits[i]);
-			if (d > diff && (splits[i + 1] - splits[i] <= wd / 2 || d > 0.05f || count > 0)) {
-				diff = d;
-				pos = i;
-			}
-		}
-		if (diff < 0.f)
-			break;
-		if (count > 0 && diff <= 0.05f && splits[pos + 1] - splits[pos] > wd / 2)
-			count--;
-		if (var[splits[pos + 1]] > var[splits[pos]])
-			pos++;
-		splits.erase(splits.begin() + pos);
-	}
-
-	for (int i = 0; i + 1 < splits.size(); i++) {
-		float mi = 255.f, ma = 0.f, sum = 0.f, cent = 0.f;
-		for (int y = s; y + s < h; y++) {
-			for (int x = splits[i] + 1; x < splits[i + 1]; x++) {
-				mi = min(mi, field[y * w + x]);
-				ma = max(ma, field[y * w + x]);
-			}
-		}
-		for (int y = s; y + s < h; y++) {
-			for (int x = splits[i] + 1; x < splits[i + 1]; x++) {
-				cent += x * (ma - field[y * w + x]);
-				sum += ma - field[y * w + x];
-			}
-		}
-		if (ma - mi < 100.f)
-			continue;
-
-		D = fields[cur].chars.size() + 1;
-		fields[cur].chars.emplace_back(wd * h);
-
-		int o = (int)(cent / sum - (wd - 1.f) / 2.f + 0.5f);
-		for (int y = 0; y < h; y++) {
-			for (int x = 0; x < wd; x++) {
-				float val = x + o < 0 || x + o >= w? 1.f: y >= s && y + s < h? (field[y * w + x + o] - mi) / (ma - mi): field[y * w + x + o] / 255.f;
-				float weight = min(1.f, -0.2f * min({0.f, x + o - 1.f - splits[i], splits[i + 1] - 1.f - x - o}));
-				operator()(x, y) = clamp((1.f - weight) * val + weight, 0.f, 1.f) * 255.f;
 			}
 		}
 	}
@@ -427,11 +429,11 @@ void ListProc::process() {
 	if (wp * hp == 0)
 		return;
 	vector<vec2> points(wp * hp);
-	vector<int> pos(wp * hp);
+	vector<int> pos;
 	for (int y = 0; y < hp; y++) {
 		for (int x = 0; x < wp; x++) {
 			points[y * wp + x] = intersect_lines(vl[x], hl[y] + vec2(M_PI / 2.f, 0.f)) + o;
-			pos[y * wp + x] = y * wp + x;
+			pos.insert(pos.end(), 3, y * wp + x);
 		}
 	}
 
@@ -452,19 +454,16 @@ void ListProc::process() {
 		for (int x = 0; x < wp; x++)
 			lines.emplace_back(points[y * wp + x], points[(y + 1) * wp + x]);
 
-	float f = big_chars? 0.2f: 0.f;
 	for (int y = 0; y + 1 < hp; y++) {
 		for (int x = 0; x + 1 < wp; x++) {
-			vec2 le(points[(y + 1) * wp + x] - points[y * wp + x]);
-			vec2 ri(points[(y + 1) * wp + x + 1] - points[y * wp + x + 1]);
-			vec3 u1(points[y * wp + x] - f * le, 1.f);
-			vec3 u2(points[y * wp + x + 1] - f * ri, 1.f);
-			vec3 u3(points[(y + 1) * wp + x + 1] + f * ri, 1.f);
-			vec3 u4(points[(y + 1) * wp + x] + f * le, 1.f);
+			vec3 u1(points[y * wp + x], 1.f);
+			vec3 u2(points[y * wp + x + 1], 1.f);
+			vec3 u3(points[(y + 1) * wp + x + 1], 1.f);
+			vec3 u4(points[(y + 1) * wp + x], 1.f);
 
 			if (length(u4 - u1) + length(u3 - u2) == 0.f)
 				continue;
-			fields.select((length(u2 - u1) + length(u3 - u4)) / (length(u4 - u1) + length(u3 - u2)), x, y);
+			fields.select((length(u2 - u1) + length(u3 - u4)) / (length(u4 - u1) + length(u3 - u2)) * (big_chars? 0.8f: 1.f), x, y);
 
 			vec3 v1(0.f, 0.f, 1.f);
 			vec3 v2(fields.W() - 1.f, 0.f, 1.f);
@@ -493,16 +492,16 @@ void ListProc::process() {
 					uint8_t& m3 = xi + 1 < w && yi + 1 < h? input[(yi + 1) * w + xi + 1]: xi + 1 < w? m1: m2;
 					float val = (1.f - wx) * (1.f - wy) * m0 + wx * (1.f - wy) * m1 + (1.f - wx) * wy * m2 + wx * wy * m3;
 
-					fields(xf, yf) = (uint8_t)clamp(val, 0.f, 255.f);
+					fields(xf, yf) = clamp(val, 0.f, 255.f);
 					mi = min(mi, fields(xf, yf));
 					ma = max(ma, fields(xf, yf));
 				}
 			}
 			for (int yf = 0; yf < fields.H(); yf++)
 				for (int xf = 0; xf < fields.W(); xf++)
-					fields(xf, yf) = (uint8_t)clamp((fields(xf, yf) - mi) * 255.f / (ma - mi), 0.f, 255.f);
+					fields(xf, yf) = clamp((fields(xf, yf) - mi) * 255.f / (ma - mi), 0.f, 255.f);
 
-			fields.separate2();
+			fields.separate(1);
 		}
 	}
 }
