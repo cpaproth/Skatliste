@@ -72,19 +72,19 @@ void Fields::separate(int mode) {
 		for (int y = 0; y < H(); y++) {
 			for (int x = 0; x < W(); x++) {
 				operator()(x, y) = (operator()(x, y) - mi) * 255 / max(1, ma - mi);
-				if (x > 1 && x < W() - 2 && y > 1 && y < H() - 2) {
+				if (x > 2 && x < W() - 3 && y > 2 && y < H() - 3) {
 					cmi = min(cmi, operator()(x, y));
 					cma = max(cma, operator()(x, y));
 				}
 			}
 		}
-		if (cma - cmi < 150)
+		if (cma - cmi < 128)
 			fields[cur].chars.erase(fields[cur].chars.begin() + D - 1);
 	}
 }
 
 void Fields::sep_mode0(int w, int h, uint8_t* field) {
-	for (int i = 2; i + wd + 2 <= w; i += 3) {
+	for (int i = 0; i + wd <= w; i += 3) {
 		D = fields[cur].chars.size() + 1;
 		fields[cur].chars.emplace_back(wd * h);
 		for (int y = 0; y < h; y++) {
@@ -261,7 +261,7 @@ void ListProc::scan(vector<uint8_t>& l, int32_t width, int32_t height) {
 	swap(input, l);
 	input.resize(w * h);
 
-	ifstream file("/storage/emulated/0/Download/img.480.ubyte");
+	ifstream file("/storage/emulated/0/Download/img1.480.ubyte");
 	file.read((char*)input.data(), input.size());
 
 	worker = thread(&ListProc::process, this);

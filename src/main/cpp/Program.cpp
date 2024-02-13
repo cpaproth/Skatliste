@@ -6,7 +6,7 @@
 
 using namespace std;
 
-Program::Program() : cam(480, 640, 0) {
+Program::Program() : cam(480, 640, 0), clss(15 * 12) {
 	glEnable(GL_TEXTURE_2D);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	for (auto tex : {&cap_tex, &dig_tex}) {
@@ -50,12 +50,20 @@ void Program::draw() {
 			ImGui::InputInt("FieldY", &fields.Y);
 			ImGui::InputInt("FieldD", &fields.D);
 		}
-	} else {
-		if (fields.select()) {
-			glBindTexture(GL_TEXTURE_2D, dig_tex);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields.W(), fields.H(), 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields.data());
-			ImGui::Image((void*)(intptr_t)dig_tex, {fields.W() * 10.f, fields.H() * 10.f});
+	} else if (fields.select()) {
+		ImGui::BeginGroup();
+		int val = ImGui::Button("S0") + ImGui::Button("S1") * 2 + ImGui::Button("S2") * 3 - 1;
+		if (val >= 0) {
+			fields.separate(val);
+			learn = fields.next();
 		}
+		ImGui::EndGroup();
+
+		ImGui::SameLine();
+		glBindTexture(GL_TEXTURE_2D, dig_tex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields.W(), fields.H(), 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields.data());
+		ImGui::Image((void*)(intptr_t)dig_tex, {fields.W() * 10.f, fields.H() * 10.f});
+
 		ImGui::SameLine();
 		ImGui::BeginGroup();
 		if (ImGui::Button("Ignore Row"))
@@ -66,15 +74,19 @@ void Program::draw() {
 			learn = fields.next();
 		ImGui::EndGroup();
 
-		const char* chars[12] = {"7", "8", "9", "4", "5", "6", "1", "2", "3", "0", "+", "-"};
-		int val = -1;
+		ImGui::SeparatorText("Label");
+		const char* chars[12] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-"};
+		val = -1;
 		for (int i = 0; i < 12; i++) {
-			if (i % 3 != 0)
+			if (i % 4 != 0)
 				ImGui::SameLine();
 			if (ImGui::Button(chars[i], {70, 70}))
 				val = i;
 		}
-
+		if (val >= 0) {
+			clss.learn(fields.data(), val);
+			learn = fields.next();
+		}
 	}
 	ImGui::End();
 
@@ -113,8 +125,4 @@ void Program::draw() {
 		fields.select(pos);
 		learn = learn? fields.next(): learn;
 	}
-	if (fields.select() && ImGui::Button("Separate1"))
-		fields.separate(1);
-	if (fields.select() && ImGui::Button("Separate2"))
-		fields.separate(0);
 }

@@ -20,5 +20,6 @@ private:
 	ListProc proc;
 	ListProc::Lines lines;
 	Fields fields;
+	Classifier clss;
 
 };
