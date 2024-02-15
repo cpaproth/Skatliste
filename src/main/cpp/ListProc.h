@@ -16,6 +16,8 @@ vec2 intersect_lines(const vec2&, const vec2&);
 
 class Fields {
 public:
+	static const int hd = 15;
+	static const int wd = hd / 5 * 4;
 	int X = 0;
 	int Y = 0;
 	int D = 0;
@@ -44,8 +46,8 @@ public:
 	bool first();
 	bool next();
 	void separate(int);
-	int W() {return D > 0? wd: fields[cur].all.size() / size;}
-	int H() {return size;}
+	int W() {return D > 0? wd: fields[cur].all.size() / hd;}
+	int H() {return hd;}
 	uint8_t* data() {return D > 0? fields[cur].chars[D - 1].data(): fields[cur].all.data();}
 	uint8_t& operator()(int x, int y) {return data()[y * W() + x];}
 private:
@@ -55,8 +57,6 @@ private:
 		std::string text;
 		int value;
 	};
-	static const int size = 15;
-	static const int wd = size / 5 * 4;
 	int cur = 0;
 	int width = 0;
 	int height = 0;

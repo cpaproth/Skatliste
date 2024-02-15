@@ -22,7 +22,7 @@ bool Fields::select(float s, int x, int y, int d) {
 		return false;
 	D = clamp(d < 0? D: d, 0, (int)fields[cur].chars.size());
 	if (s > 0.f)
-		fields[cur].all.resize(size * ceil(s * size));
+		fields[cur].all.resize(hd * ceil(s * hd));
 	return true;
 }
 

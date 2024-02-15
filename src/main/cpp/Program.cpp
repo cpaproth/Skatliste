@@ -6,7 +6,7 @@
 
 using namespace std;
 
-Program::Program() : cam(480, 640, 0), clss(15 * 12) {
+Program::Program() : cam(480, 640, 0), clss(Fields::wd, Fields::hd) {
 	glEnable(GL_TEXTURE_2D);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	for (auto tex : {&cap_tex, &dig_tex}) {
@@ -74,8 +74,10 @@ void Program::draw() {
 			learn = fields.next();
 		ImGui::EndGroup();
 
-		ImGui::SeparatorText("Label");
 		const char* chars[12] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-"};
+		uint8_t cl, prob, cln, diff;
+		tie(cl, prob, cln, diff) = clss.classify(fields.data());
+		ImGui::Text("%s %d%% %s %d", chars[cl], prob, chars[cln], diff);
 		val = -1;
 		for (int i = 0; i < 12; i++) {
 			if (i % 4 != 0)
@@ -84,7 +86,8 @@ void Program::draw() {
 				val = i;
 		}
 		if (val >= 0) {
-			clss.learn(fields.data(), val);
+			if (val != cln || diff > 20)
+				clss.learn(fields.data(), val);
 			learn = fields.next();
 		}
 	}
