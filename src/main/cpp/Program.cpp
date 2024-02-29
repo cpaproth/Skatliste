@@ -128,4 +128,6 @@ void Program::draw() {
 		fields.select(pos);
 		learn = learn? fields.next(): learn;
 	}
+
+	this_thread::sleep_for(chrono::milliseconds(30));
 }
