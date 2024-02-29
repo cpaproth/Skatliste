@@ -247,7 +247,7 @@ void Classifier::learn(uint8_t* chr, uint8_t l) {
 	chars.emplace_back(chr, chr + w * h);
 }
 
-tuple<uint8_t, uint8_t, uint8_t, uint8_t> Classifier::classify(uint8_t* chr) {
+tuple<uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t> Classifier::classify(uint8_t* chr) {
 	multimap<float, uint8_t> knn;
 	for (int c = 0; c < chars.size(); c++) {
 		float diff = 0.f;
@@ -258,18 +258,17 @@ tuple<uint8_t, uint8_t, uint8_t, uint8_t> Classifier::classify(uint8_t* chr) {
 			knn.erase(prev(knn.end()));
 	}
 	if (knn.size() == 0)
-		return {0, 0, 0, 255};
+		return {0, 0, 0, 0, 0, 255};
 	vector<int> count(256, 0);
 	for (auto it = knn.begin(); it != knn.end(); it++)
 		count[it->second]++;
-	auto ma = max_element(count.begin(), count.end());
+	auto mk = max_element(count.begin(), count.end());
 
 	NeuralNet::Values in(w * h), out;
 	for (int i = 0; i < in.size(); i++)
 		in[i] = chr[i] / 255.f;
 	out = nn.forward(in);
-	auto me = max_element(out.begin(), out.end());
-	return {me - out.begin(), *me * 100, knn.begin()->second, knn.begin()->first};
+	auto mn = max_element(out.begin(), out.end());
 
-	//return {ma - count.begin(), *ma * 10, knn.begin()->second, knn.begin()->first};
+	return {mn - out.begin(), *mn * 100, mk - count.begin(), *mk * 10, knn.begin()->second, knn.begin()->first};
 }

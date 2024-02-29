@@ -75,9 +75,9 @@ void Program::draw() {
 		ImGui::EndGroup();
 
 		const char* chars[12] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-"};
-		uint8_t cl, prob, cln, diff;
-		tie(cl, prob, cln, diff) = clss.classify(fields.data());
-		ImGui::Text("%s %d%% %s %d", chars[cl], prob, chars[cln], diff);
+		uint8_t cl1, prob1, cl2, prob2, cln, diff;
+		tie(cl1, prob1, cl2, prob2, cln, diff) = clss.classify(fields.data());
+		ImGui::Text("%s %d%% %s %d%% %s %d", chars[cl1], prob1, chars[cl2], prob2, chars[cln], diff);
 		val = -1;
 		for (int i = 0; i < 12; i++) {
 			if (i % 4 != 0)

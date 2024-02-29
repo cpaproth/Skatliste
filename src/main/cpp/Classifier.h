@@ -75,7 +75,7 @@ public:
 	Classifier(int, int);
 
 	void learn(uint8_t*, uint8_t);
-	std::tuple<uint8_t, uint8_t, uint8_t, uint8_t> classify(uint8_t*);
+	std::tuple<uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t> classify(uint8_t*);
 
 private:
 	int w;
