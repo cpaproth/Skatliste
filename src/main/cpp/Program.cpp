@@ -27,14 +27,18 @@ Program::~Program() {
 void Program::draw() {
 
 	static bool learn = false;
-	ImGui::Begin("Skat List", learn? &learn: 0);
-	if (!learn) {
+	static bool convert = false;
+	ImGui::Begin("Skat List", learn? &learn: convert? &convert: 0);
+	if (!learn && !convert) {
 		if (ImGui::Button(cam.cap()? "Stop": "Scan"))
 			cam.cap()? cam.stop(): cam.start();
 		ImGui::SameLine();
 		if (!cam.cap() && fields.select()) {
 			if (ImGui::Button("Learn"))
 				learn = fields.first();
+			ImGui::SameLine();
+			if (ImGui::Button("Convert"))
+				convert = true;
 		} else {
 			ImGui::Checkbox("Big", &proc.big_chars);
 		}
@@ -49,6 +53,17 @@ void Program::draw() {
 			ImGui::InputInt("FieldX", &fields.X);
 			ImGui::InputInt("FieldY", &fields.Y);
 			ImGui::InputInt("FieldD", &fields.D);
+		}
+	} else if (convert) {
+		if (ImGui::BeginTable("", 4)) {
+			static int valu[110];
+			for (int i = 0; i < 110; i++) {
+				ImGui::TableNextColumn();
+				ImGui::PushID(i);
+				ImGui::InputInt("", &valu[i], 0);
+				ImGui::PopID();
+			}
+			ImGui::EndTable();
 		}
 	} else if (fields.select()) {
 		ImGui::BeginGroup();
