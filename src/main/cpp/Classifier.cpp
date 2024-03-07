@@ -218,7 +218,7 @@ NeuralNet::Values NeuralNet::Convolutional::backprop(const Values& delta, const 
 	return out;
 }
 
-Classifier::Classifier(int width, int height) : w(width), h(height), nn(w * h, 0.f) {
+Classifier::Classifier(int width, int height, int num) : w(width), h(height), n(num), nn(w * h, 0.f) {
 	ifstream file("/storage/emulated/0/Download/chars.181.ubyte", ifstream::binary);
 	char mem[w * h + 1];
 	while (file.read(mem, w * h + 1)) {
@@ -227,12 +227,13 @@ Classifier::Classifier(int width, int height) : w(width), h(height), nn(w * h, 0
 	}
 	cout << "characters: " << labels.size() << endl;
 
-	nn.addConvolutional(20, 9, 12, 4, 4);
+	int c = 4, m = 3;
+	nn.addConvolutional(20, w - c + 1, h - c + 1, c, c);
 	nn.addSigmoid();
-	nn.addMaxPooling(3, 4, 3, 3);
+	nn.addMaxPooling((w - c + 1) / m, (h - c + 1) / m, m, m);
 	nn.addLinear(100);
 	nn.addSigmoid();
-	nn.addLinear(12);
+	nn.addLinear(n);
 	nn.addSigmoid();
 	nn.load("/storage/emulated/0/Download/nn.1.flt");
 }
@@ -259,15 +260,16 @@ tuple<uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t> Classifier::classify
 	}
 	if (knn.size() == 0)
 		return {0, 0, 0, 0, 0, 255};
-	vector<int> count(256, 0);
+	vector<int> count(n, 0);
 	for (auto it = knn.begin(); it != knn.end(); it++)
-		count[it->second]++;
+		count[it->second % n]++;
 	auto mk = max_element(count.begin(), count.end());
 
 	NeuralNet::Values in(w * h), out;
 	for (int i = 0; i < in.size(); i++)
 		in[i] = chr[i] / 255.f;
 	out = nn.forward(in);
+	out.resize(n);
 	auto mn = max_element(out.begin(), out.end());
 
 	return {mn - out.begin(), *mn * 100, mk - count.begin(), *mk * 10, knn.begin()->second, knn.begin()->first};

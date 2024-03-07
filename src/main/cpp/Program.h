@@ -21,5 +21,10 @@ private:
 	ListProc::Lines lines;
 	Fields fields;
 	Classifier clss;
+	static const std::vector<const char*> chars;
+
+	std::vector<int> numbers;
+
+	void read_field();
 
 };

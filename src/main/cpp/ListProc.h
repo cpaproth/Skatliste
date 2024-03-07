@@ -45,7 +45,7 @@ public:
 	bool ignore_col() {cols.insert(X); return next();}
 	bool first();
 	bool next();
-	void separate(int);
+	int separate(int);
 	int W() {return D > 0? wd: fields[cur].all.size() / hd;}
 	int H() {return hd;}
 	uint8_t* data() {return D > 0? fields[cur].chars[D - 1].data(): fields[cur].all.data();}
@@ -62,7 +62,7 @@ private:
 	int height = 0;
 	std::vector<Field> fields;
 	std::set<int> rows, cols;
-	void sep_mode0(int, int, uint8_t*);
+	void sep_mode0(int, int, uint8_t*, int);
 	void sep_mode1(int, int, uint8_t*);
 	void sep_mode2(int, int, uint8_t*);
 };

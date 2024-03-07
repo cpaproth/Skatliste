@@ -2,11 +2,15 @@
 
 #include "Program.h"
 #include "imgui.h"
+#include <map>
+
 #include <iostream>
 
 using namespace std;
 
-Program::Program() : cam(480, 640, 0), clss(Fields::wd, Fields::hd) {
+const vector<const char*> Program::chars{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-"};
+
+Program::Program() : cam(480, 640, 0), clss(Fields::wd, Fields::hd, chars.size()) {
 	glEnable(GL_TEXTURE_2D);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	for (auto tex : {&cap_tex, &dig_tex}) {
@@ -55,12 +59,11 @@ void Program::draw() {
 			ImGui::InputInt("FieldD", &fields.D);
 		}
 	} else if (convert) {
-		if (ImGui::BeginTable("", 4)) {
-			static int valu[110];
-			for (int i = 0; i < 110; i++) {
+		if (ImGui::BeginTable("", 1)) {
+			for (int i = 0; i < numbers.size(); i++) {
 				ImGui::TableNextColumn();
 				ImGui::PushID(i);
-				ImGui::InputInt("", &valu[i], 0);
+				ImGui::InputInt("", &numbers[i], 0);
 				ImGui::PopID();
 			}
 			ImGui::EndTable();
@@ -89,12 +92,11 @@ void Program::draw() {
 			learn = fields.next();
 		ImGui::EndGroup();
 
-		const char* chars[12] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-"};
 		uint8_t cl1, prob1, cl2, prob2, cln, diff;
 		tie(cl1, prob1, cl2, prob2, cln, diff) = clss.classify(fields.data());
 		ImGui::Text("%s %d%% %s %d%% %s %d", chars[cl1], prob1, chars[cl2], prob2, chars[cln], diff);
 		val = -1;
-		for (int i = 0; i < 12; i++) {
+		for (int i = 0; i < chars.size(); i++) {
 			if (i % 4 != 0)
 				ImGui::SameLine();
 			if (ImGui::Button(chars[i], {70, 70}))
@@ -140,9 +142,70 @@ void Program::draw() {
 				pos = i;
 			}
 		}
-		fields.select(pos);
+		if (fields.select(pos) && convert)
+			read_field();
 		learn = learn? fields.next(): learn;
 	}
 
 	this_thread::sleep_for(chrono::milliseconds(30));
+}
+
+void Program::read_field() {
+	int n = fields.separate(3), o = Fields::wd / 2;
+	NeuralNet::Values mem(n * chars.size()), in(Fields::wd * Fields::hd), out;
+
+	for (int i = 0; i < n; i++) {
+		fields.select(0.f, -1, -1, i + 1);
+
+		for (int j = 0; j < in.size(); j++)
+			in[j] = fields.data()[j] / 255.f;
+		out = clss.classify(in);
+
+		for (int j = 0; j < out.size(); j++)
+			mem[j * n + i] = out[j];
+	}
+
+	multimap<float, int, greater<float>> best;
+	for (int j = 0; j < chars.size(); j++) {
+		for (int i = 0; i < n; i++) {
+			float sum = 0.f, ma = 0.f;
+			for (int k = i >= o? i - o: 0; k < n && k <= i + o; k++) {
+				sum += mem[j * n + k];
+				ma = max(ma, mem[j * n + k] + mem[j * n + (k > 0? k - 1: 0)] + mem[j * n + (k + 1 < n? k + 1: k)]);
+			}
+			if (ma == mem[j * n + i] + mem[j * n + (i > 0? i - 1: 0)] + mem[j * n + (i + 1 < n? i + 1: i)])
+				best.insert({sum, (i << 4) + j});
+		}
+	}
+
+	map<int, float> digs;
+	for (auto it = best.begin(); it != best.end() && digs.size() < 5; it++)
+		if ((it->second & 15) < 10)
+			digs.insert({it->second, it->first});
+
+	multimap<float, int, greater<float>> nums;
+	for (int i = 0; i < 1 << digs.size(); i++) {
+		vector<int> pos;
+		int num = 0;
+		float prob = 0.f;
+		int c = i;
+		for (auto it = digs.begin(); it != digs.end(); it++, c >>= 1) {
+			if (c & 1) {
+				num = num * 10 + (it->first & 15);
+				pos.push_back(it->first >> 4);
+				prob += it->second - 2.5f;
+			}
+		}
+		bool tooclose = false;
+		for (int j = 0; j + 1 < pos.size(); j++)
+			tooclose |= pos[j + 1] - pos[j] <= o;
+		if (!tooclose)
+			nums.insert({prob, num});
+	}
+
+	numbers.clear();
+	for (auto it = nums.begin(); it != nums.end(); it++)
+		numbers.push_back(it->second);
+
+	fields.separate(1);
 }

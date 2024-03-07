@@ -72,14 +72,16 @@ private:
 
 class Classifier {
 public:
-	Classifier(int, int);
+	Classifier(int, int, int);
 
 	void learn(uint8_t*, uint8_t);
 	std::tuple<uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t> classify(uint8_t*);
+	NeuralNet::Values classify(const NeuralNet::Values& in) {return nn.forward(in);}
 
 private:
 	int w;
 	int h;
+	int n;
 	std::vector<std::vector<uint8_t>> chars;
 	std::vector<uint8_t> labels;
 	NeuralNet nn;
