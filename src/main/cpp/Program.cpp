@@ -54,12 +54,14 @@ void Program::draw() {
 			glBindTexture(GL_TEXTURE_2D, dig_tex);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields.W(), fields.H(), 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields.data());
 			ImGui::Image((void*)(intptr_t)dig_tex, {fields.W() * 4.f, fields.H() * 4.f});
+			ImGui::Text("%s", fields.str().c_str());
 			ImGui::InputInt("FieldX", &fields.X);
 			ImGui::InputInt("FieldY", &fields.Y);
 			ImGui::InputInt("FieldD", &fields.D);
 		}
 	} else if (convert) {
 		if (ImGui::BeginTable("", 1)) {
+			vector<int> numbers{1,2,3,4};
 			for (int i = 0; i < numbers.size(); i++) {
 				ImGui::TableNextColumn();
 				ImGui::PushID(i);
@@ -125,8 +127,14 @@ void Program::draw() {
 	if (cam.cap())
 		cam.swap_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
 
-	if (proc.result(lines, fields))
+	static int curpos = INT_MAX;
+	if (proc.result(lines, fields)) {
 		cam.stop();
+		curpos = 0;
+	}
+	for (int i = 0; i < 20 && fields.select(curpos, -1); i++, curpos++, learn = convert = false)
+		read_field();
+
 	int pos = 0;
 	for (auto& l : lines)
 		ImGui::GetBackgroundDrawList()->AddLine({f * l.x.x, f * l.x.y}, {f * l.y.x, f * l.y.y}, fields.check(pos++)? 0xff00ff00: 0xff0000ff);
@@ -142,8 +150,7 @@ void Program::draw() {
 				pos = i;
 			}
 		}
-		if (fields.select(pos) && convert)
-			read_field();
+		fields.select(pos);
 		learn = learn? fields.next(): learn;
 	}
 
@@ -151,6 +158,7 @@ void Program::draw() {
 }
 
 void Program::read_field() {
+	fields.str().clear();
 	int n = fields.separate(3), o = Fields::wd / 2;
 	NeuralNet::Values mem(n * chars.size()), in(Fields::wd * Fields::hd), out;
 
@@ -173,39 +181,18 @@ void Program::read_field() {
 				sum += mem[j * n + k];
 				ma = max(ma, mem[j * n + k] + mem[j * n + (k > 0? k - 1: 0)] + mem[j * n + (k + 1 < n? k + 1: k)]);
 			}
-			if (ma == mem[j * n + i] + mem[j * n + (i > 0? i - 1: 0)] + mem[j * n + (i + 1 < n? i + 1: i)])
+			if (ma == mem[j * n + i] + mem[j * n + (i > 0? i - 1: 0)] + mem[j * n + (i + 1 < n? i + 1: i)] && sum > 2.f)
 				best.insert({sum, (i << 4) + j});
 		}
 	}
 
-	map<int, float> digs;
-	for (auto it = best.begin(); it != best.end() && digs.size() < 5; it++)
-		if ((it->second & 15) < 10)
-			digs.insert({it->second, it->first});
+	set<int> digs;
+	for (auto it = best.begin(); it != best.end() && digs.size() < n * 3 / o / 4 + 1; it++)
+		digs.insert(it->second);
 
-	multimap<float, int, greater<float>> nums;
-	for (int i = 0; i < 1 << digs.size(); i++) {
-		vector<int> pos;
-		int num = 0;
-		float prob = 0.f;
-		int c = i;
-		for (auto it = digs.begin(); it != digs.end(); it++, c >>= 1) {
-			if (c & 1) {
-				num = num * 10 + (it->first & 15);
-				pos.push_back(it->first >> 4);
-				prob += it->second - 2.5f;
-			}
-		}
-		bool tooclose = false;
-		for (int j = 0; j + 1 < pos.size(); j++)
-			tooclose |= pos[j + 1] - pos[j] <= o;
-		if (!tooclose)
-			nums.insert({prob, num});
-	}
-
-	numbers.clear();
-	for (auto it = nums.begin(); it != nums.end(); it++)
-		numbers.push_back(it->second);
+	for (auto it = digs.begin(); it != digs.end(); it++)
+		if ((*it & 15) < 11)
+			fields.str().append(chars[*it & 15]);
 
 	fields.separate(1);
 }

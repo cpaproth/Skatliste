@@ -26,6 +26,18 @@ bool Fields::select(float s, int x, int y, int d) {
 	return true;
 }
 
+bool Fields::select(int x, int y) {
+	if (width <= 0)
+		return false;
+	if (y < 0) {
+		y = x / width;
+		x = x % width;
+	}
+	if (x >= width || y >= height)
+		return false;
+	return select(0.f, x, y, 0);
+}
+
 bool Fields::first() {
 	rows.clear();
 	cols.clear();
@@ -504,7 +516,6 @@ void ListProc::process() {
 				for (int xf = 0; xf < fields.W(); xf++)
 					fields(xf, yf) = clamp((fields(xf, yf) - mi) * 255.f / (ma - mi), 0.f, 255.f);
 
-			fields.separate(1);
 		}
 	}
 }

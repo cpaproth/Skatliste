@@ -41,6 +41,7 @@ public:
 		return select(0.f, p % w, p / w, 0);
 	}
 	bool select(float = 0.f, int = -1, int = -1, int = -1);
+	bool select(int, int);
 	bool ignore_row() {rows.insert(Y); return next();}
 	bool ignore_col() {cols.insert(X); return next();}
 	bool first();
@@ -50,12 +51,12 @@ public:
 	int H() {return hd;}
 	uint8_t* data() {return D > 0? fields[cur].chars[D - 1].data(): fields[cur].all.data();}
 	uint8_t& operator()(int x, int y) {return data()[y * W() + x];}
+	std::string& str() {return fields[cur].text;}
 private:
 	struct Field {
 		std::vector<uint8_t> all;
 		std::vector<std::vector<uint8_t>> chars;
 		std::string text;
-		int value;
 	};
 	int cur = 0;
 	int width = 0;
