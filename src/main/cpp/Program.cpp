@@ -42,7 +42,7 @@ void Program::draw() {
 				learn = fields.first();
 			ImGui::SameLine();
 			if (ImGui::Button("Convert"))
-				convert = true;
+				convert = read_list();
 		} else {
 			ImGui::Checkbox("Big", &proc.big_chars);
 		}
@@ -60,8 +60,7 @@ void Program::draw() {
 			ImGui::InputInt("FieldD", &fields.D);
 		}
 	} else if (convert) {
-		if (ImGui::BeginTable("", 1)) {
-			vector<int> numbers{1,2,3,4};
+		if (ImGui::BeginTable("", 3)) {
 			for (int i = 0; i < numbers.size(); i++) {
 				ImGui::TableNextColumn();
 				ImGui::PushID(i);
@@ -181,13 +180,14 @@ void Program::read_field() {
 				sum += mem[j * n + k];
 				ma = max(ma, mem[j * n + k] + mem[j * n + (k > 0? k - 1: 0)] + mem[j * n + (k + 1 < n? k + 1: k)]);
 			}
-			if (ma == mem[j * n + i] + mem[j * n + (i > 0? i - 1: 0)] + mem[j * n + (i + 1 < n? i + 1: i)] && sum > 2.f)
+			if (ma == mem[j * n + i] + mem[j * n + (i > 0? i - 1: 0)] + mem[j * n + (i + 1 < n? i + 1: i)])
 				best.insert({sum, (i << 4) + j});
 		}
 	}
 
 	set<int> digs;
-	for (auto it = best.begin(); it != best.end() && digs.size() < n * 3 / o / 4 + 1; it++)
+	float sum = 0.f;
+	for (auto it = best.begin(); it != best.end() && it->first > sum / (float(n) * 4 / o / 4 + 1); sum += it->first, it++)
 		digs.insert(it->second);
 
 	for (auto it = digs.begin(); it != digs.end(); it++)
@@ -196,3 +196,71 @@ void Program::read_field() {
 
 	fields.separate(1);
 }
+
+int Program::dist(const string& s, const string& t) {
+	vector<int> v0(t.length() + 1), v1(t.length() + 1);
+
+	for (int i = 0; i < v0.size(); i++)
+		v0[i] = i;
+
+	for (int i = 0; i < s.length(); i++) {
+		v1[0] = i + 1;
+		for (int j = 0; j < t.length(); j++)
+			v1[j + 1] = min({v0[j + 1] + 1, v1[j] + 1, v0[j] + (s[i] == t[j]? 0: 1)});
+		swap(v0, v1);
+	}
+
+	return v0[t.length()];
+}
+
+bool Program::read_list() {
+	vector<int> scol, srow;
+
+	for (int x = 0; fields.select(x, 0); x++) {
+		int sum = 0;
+		for (int y = 0; fields.select(x, y); y++)
+			sum += fields.str().length();
+		scol.push_back(sum);
+	}
+
+	for (int y = 0; fields.select(0, y); y++) {
+		int sum = 0;
+		for (int x = 0; fields.select(x, y); x++)
+			sum += fields.str().length();
+		srow.push_back(sum);
+	}
+
+	int n = 3, c = 0, r = 0, g = 10;
+	while (c + 17 < scol.size() && !(scol[c] > scol[c + 1] && scol[c + 8] < scol[c + 9] && scol[c + 11] > scol[c + 12] && scol[c + 13] < scol[c + 14] && scol[c + 14] > scol[c + 15] && scol[c + 16] < scol[c + 17]))
+		c++;
+	if (c + 20 < scol.size() && scol[c + 17] > scol[c + 18] && scol[c + 19] < scol[c + 20])
+		n++;
+	while (r + n * g <= srow.size() && srow[r] < 5)
+		r++;
+	if (c + 9 + n * 3 > scol.size() || r + n * g > srow.size())
+		return false;
+
+
+	numbers.clear();
+	for (int i = 0; i < n * g; i++) {
+		auto f = [&](int x) {fields.select(c + x, r + i); return fields.str();};
+		string game = f(0), tips = f(1) + f(2), extra = f(3) + f(4) + f(5) + f(6) + f(7) + f(8);
+		string points = f(9).length() >= f(10).length()? f(9): f(10), result;
+		int value = f(9).length() >= f(10).length()? i + 1: -i - 1, player = 0;
+
+		for (int j = 1; j <= n; j++) {
+			if (f(8 + 3 * j).length() >= result.length()) {
+				result = f(8 + 3 * j);
+				player = j;
+			}
+		}
+
+		int ext = count(extra.begin(), extra.end(), chars[10][0]);
+		numbers.push_back(ext);
+		numbers.push_back(value);
+		numbers.push_back(player);
+	}
+
+	return true;
+}
+
