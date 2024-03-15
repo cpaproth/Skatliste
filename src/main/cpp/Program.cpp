@@ -21,6 +21,24 @@ Program::Program() : cam(480, 640, 0), clss(Fields::wd, Fields::hd, chars.size()
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
+
+	for (int n = 9; n <= 12; n++) {
+		for (int g = 2; g <= 18; g++) {
+			for (int t = max(1, g - 7); t <= min(11, g - 1); t++)
+				games.push_back(Game{to_string(n), to_string(t), g - t - 1, g * n});
+		}
+	}
+	for (int g = 2; g <= 11; g++) {
+		for (int t = max(1, g - 7); t <= min(4, g - 1); t++)
+			games.push_back(Game{"24", to_string(t), g - t - 1, g * 24});
+	}
+	games.push_back(Game{"23", "", 0, 23});
+	games.push_back(Game{"23", "", 1, 35});
+	games.push_back(Game{"23", "", 1, 46});
+	games.push_back(Game{"23", "", 2, 59});
+	games.push_back(Game{"35", "", 0, 35});
+	games.push_back(Game{"46", "", 0, 46});
+	games.push_back(Game{"59", "", 0, 59});
 }
 
 Program::~Program() {
@@ -187,7 +205,7 @@ void Program::read_field() {
 
 	set<int> digs;
 	float sum = 0.f;
-	for (auto it = best.begin(); it != best.end() && it->first > sum / (float(n) * 4 / o / 4 + 1); sum += it->first, it++)
+	for (auto it = best.begin(); it != best.end() && it->first > o * sum / n; sum += it->first, it++)
 		digs.insert(it->second);
 
 	for (auto it = digs.begin(); it != digs.end(); it++)
@@ -211,6 +229,18 @@ int Program::dist(const string& s, const string& t) {
 	}
 
 	return v0[t.length()];
+}
+
+int Program::dist(const Game& game, bool win, int last, const string& name, const string& tips, int extra, const string& points, const string& score) {
+	int res = dist(game.name, name) + dist(game.tips, tips) + abs(game.extra - extra);
+	if (win) {
+		res += dist(to_string(game.points), points);
+		res += dist(to_string(abs(last + game.points)), score);
+	} else {
+		res += dist(to_string(2 * game.points), points);
+		res += dist(to_string(abs(last - 2 * game.points)), score);
+	}
+	return res;
 }
 
 bool Program::read_list() {
@@ -244,22 +274,33 @@ bool Program::read_list() {
 	numbers.clear();
 	for (int i = 0; i < n * g; i++) {
 		auto f = [&](int x) {fields.select(c + x, r + i); return fields.str();};
-		string game = f(0), tips = f(1) + f(2), extra = f(3) + f(4) + f(5) + f(6) + f(7) + f(8);
-		string points = f(9).length() >= f(10).length()? f(9): f(10), result;
+		string name = f(0), tips = f(1) + f(2), extra = f(3) + f(4) + f(5) + f(6) + f(7) + f(8);
+		string points = f(9).length() >= f(10).length()? f(9): f(10), score;
 		int value = f(9).length() >= f(10).length()? i + 1: -i - 1, player = 0;
 
 		for (int j = 1; j <= n; j++) {
-			if (f(8 + 3 * j).length() >= result.length()) {
-				result = f(8 + 3 * j);
+			if (f(8 + 3 * j).length() > score.length()) {
+				score = f(8 + 3 * j);
 				player = j;
 			}
 		}
 
 		int ext = count(extra.begin(), extra.end(), chars[10][0]);
-		numbers.push_back(ext);
-		numbers.push_back(value);
-		numbers.push_back(player);
+		//numbers.push_back(ext);
+		//numbers.push_back(value);
+		//numbers.push_back(player);
+
+		multimap<int, int> best;
+		for (int g = 0; g < games.size() && i == 13; g++)
+			best.insert({dist(games[g], true, 70, name, tips, ext, points, score), g});
+
+		for (auto it = best.begin(); it != best.end() && i == 13 && numbers.size() < 30; it++) {
+			numbers.push_back(it->first);
+			numbers.push_back(games[it->second].points);
+			numbers.push_back(stoi(games[it->second].name));
+		}
 	}
+
 
 	return true;
 }
