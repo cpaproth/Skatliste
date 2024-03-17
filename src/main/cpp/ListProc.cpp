@@ -276,7 +276,7 @@ void ListProc::scan(vector<uint8_t>& l, int32_t width, int32_t height) {
 	swap(input, l);
 	input.resize(w * h);
 
-	ifstream file("/storage/emulated/0/Download/img1.480.ubyte");
+	ifstream file("/storage/emulated/0/Download/img.480.ubyte");
 	file.read((char*)input.data(), input.size());
 
 	worker = thread(&ListProc::process, this);

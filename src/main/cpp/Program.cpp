@@ -149,7 +149,7 @@ void Program::draw() {
 		cam.stop();
 		curpos = 0;
 	}
-	for (int i = 0; i < 20 && fields.select(curpos, -1); i++, curpos++, learn = convert = false)
+	for (int i = 0; !cam.cap() && i < 40 && fields.select(curpos, -1); i++, curpos++, learn = convert = false)
 		read_field();
 
 	int pos = 0;
@@ -171,7 +171,8 @@ void Program::draw() {
 		learn = learn? fields.next(): learn;
 	}
 
-	this_thread::sleep_for(chrono::milliseconds(30));
+	if (!fields.select(curpos, -1))
+		this_thread::sleep_for(chrono::milliseconds(30));
 }
 
 void Program::read_field() {
@@ -265,11 +266,10 @@ bool Program::read_list() {
 		c++;
 	if (c + 20 < scol.size() && scol[c + 17] > scol[c + 18] && scol[c + 19] < scol[c + 20])
 		n++;
-	while (r + n * g <= srow.size() && srow[r] < 5)
+	while (r + n * g <= srow.size() && srow[r] < 6)
 		r++;
 	if (c + 9 + n * 3 > scol.size() || r + n * g > srow.size())
 		return false;
-
 
 	numbers.clear();
 	for (int i = 0; i < n * g; i++) {
@@ -279,22 +279,24 @@ bool Program::read_list() {
 		int value = f(9).length() >= f(10).length()? i + 1: -i - 1, player = 0;
 
 		for (int j = 1; j <= n; j++) {
+			if (n == 4 && i % n == j - 1)
+				continue;
 			if (f(8 + 3 * j).length() > score.length()) {
 				score = f(8 + 3 * j);
 				player = j;
 			}
 		}
 
-		int ext = count(extra.begin(), extra.end(), chars[10][0]);
+		int ext = count(extra.begin(), extra.end(), '+');
 		//numbers.push_back(ext);
 		//numbers.push_back(value);
 		//numbers.push_back(player);
 
 		multimap<int, int> best;
-		for (int g = 0; g < games.size() && i == 13; g++)
-			best.insert({dist(games[g], true, 70, name, tips, ext, points, score), g});
+		for (int g = 0; g < games.size() && i == 0; g++)
+			best.insert({dist(games[g], true, 0, name, tips, ext, points, score), g});
 
-		for (auto it = best.begin(); it != best.end() && i == 13 && numbers.size() < 30; it++) {
+		for (auto it = best.begin(); it != best.end() && numbers.size() < 30; it++) {
 			numbers.push_back(it->first);
 			numbers.push_back(games[it->second].points);
 			numbers.push_back(stoi(games[it->second].name));
