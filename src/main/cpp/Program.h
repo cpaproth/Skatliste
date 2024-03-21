@@ -20,6 +20,12 @@ private:
 		int extra;
 		int points;
 	};
+	struct Line {
+		int points;
+		int player;
+		std::array<int, 4> scores;
+	};
+	typedef std::vector<Line> List;
 
 	GLuint cap_tex = 0;
 	GLuint dig_tex = 0;
@@ -30,10 +36,11 @@ private:
 	Classifier clss;
 	static const std::vector<const char*> chars;
 	std::vector<Game> games;
+	std::vector<List> lists;
 
-	std::vector<int> numbers;
+	void show_results();
 	void read_field();
 	int dist(const std::string&, const std::string&);
 	int dist(const Game&, bool, int, const std::string&, const std::string&, int, const std::string&, const std::string&);
-	bool read_list();
+	bool read_list(int);
 };

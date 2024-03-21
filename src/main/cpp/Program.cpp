@@ -50,7 +50,11 @@ void Program::draw() {
 
 	static bool learn = false;
 	static bool convert = false;
-	ImGui::Begin("Skat List", learn? &learn: convert? &convert: 0);
+	if (convert) {
+		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
+		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
+	}
+	ImGui::Begin(convert? "Skat List##1": "Skat List##2", learn? &learn: convert? &convert: 0);
 	if (!learn && !convert) {
 		if (ImGui::Button(cam.cap()? "Stop": "Scan"))
 			cam.cap()? cam.stop(): cam.start();
@@ -60,7 +64,7 @@ void Program::draw() {
 				learn = fields.first();
 			ImGui::SameLine();
 			if (ImGui::Button("Convert"))
-				convert = read_list();
+				convert = read_list(0);
 		} else {
 			ImGui::Checkbox("Big", &proc.big_chars);
 		}
@@ -78,15 +82,7 @@ void Program::draw() {
 			ImGui::InputInt("FieldD", &fields.D);
 		}
 	} else if (convert) {
-		if (ImGui::BeginTable("", 3)) {
-			for (int i = 0; i < numbers.size(); i++) {
-				ImGui::TableNextColumn();
-				ImGui::PushID(i);
-				ImGui::InputInt("", &numbers[i], 0);
-				ImGui::PopID();
-			}
-			ImGui::EndTable();
-		}
+		show_results();
 	} else if (fields.select()) {
 		ImGui::BeginGroup();
 		int val = ImGui::Button("S0") + ImGui::Button("S1") * 2 + ImGui::Button("S2") * 3 - 1;
@@ -175,6 +171,53 @@ void Program::draw() {
 		this_thread::sleep_for(chrono::milliseconds(30));
 }
 
+void Program::show_results() {
+	int start = 0;
+
+	if (ImGui::BeginTable("", 7)) {
+		int n = 1;
+		auto& l = lists[0];
+		for (int r = 1; r < l.size(); r++) {
+			ImGui::PushID(r);
+			ImGui::TableNextRow();
+
+			ImGui::TableNextColumn();
+			if (l[r].points != 0)
+				ImGui::Text("%d", n++);
+
+			ImGui::TableNextColumn();
+			int res = ImGui::InputInt("##1", &l[r].points, 0);
+
+			ImGui::TableNextColumn();
+			if (l[r].points != 0)
+				res += ImGui::SliderInt("##2", &l[r].player, 0, 3);
+
+			for (int i = 0; i < 4; i++) {
+				ImGui::TableNextColumn();
+				ImGui::PushID(i);
+				if (l[r].scores[i] != l[r - 1].scores[i])
+					res += 2 * ImGui::InputInt("##3", &l[r].scores[i], 0);
+				else
+					ImGui::Text("-");
+				ImGui::PopID();
+			}
+
+			if (res == 1 && l[r].player >= 0) {
+				l[r].scores = l[r - 1].scores;
+				l[r].scores[l[r].player] = l[r - 1].scores[l[r].player] + l[r].points;
+			}
+			if (res > 0)
+				start = r;
+
+			ImGui::PopID();
+		}
+		ImGui::EndTable();
+	}
+
+	if (start > 0)
+		read_list(start);
+}
+
 void Program::read_field() {
 	fields.str().clear();
 	int n = fields.separate(3), o = Fields::wd / 2;
@@ -233,8 +276,10 @@ int Program::dist(const string& s, const string& t) {
 }
 
 int Program::dist(const Game& game, bool win, int last, const string& name, const string& tips, int extra, const string& points, const string& score) {
-	int res = dist(game.name, name) + dist(game.tips, tips) + abs(game.extra - extra);
-	if (win) {
+	int res = dist(game.name, name) + dist(game.tips, tips) + abs(game.extra - extra) - points.length() - score.length();
+	if (game.points == 0) {
+		res += points.length() + score.length();
+	} else if (win) {
 		res += dist(to_string(game.points), points);
 		res += dist(to_string(abs(last + game.points)), score);
 	} else {
@@ -244,65 +289,76 @@ int Program::dist(const Game& game, bool win, int last, const string& name, cons
 	return res;
 }
 
-bool Program::read_list() {
+bool Program::read_list(int start) {
 	vector<int> scol, srow;
 
-	for (int x = 0; fields.select(x, 0); x++) {
-		int sum = 0;
-		for (int y = 0; fields.select(x, y); y++)
-			sum += fields.str().length();
-		scol.push_back(sum);
-	}
-
 	for (int y = 0; fields.select(0, y); y++) {
-		int sum = 0;
-		for (int x = 0; fields.select(x, y); x++)
-			sum += fields.str().length();
-		srow.push_back(sum);
+		srow.resize(max((int)srow.size(), y + 1), 0);
+		for (int x = 0; fields.select(x, y); x++) {
+			scol.resize(max((int)scol.size(), x + 1), 0);
+			srow[y] += fields.str().length();
+			scol[x] += fields.str().length();
+		}
 	}
 
-	int n = 3, c = 0, r = 0, g = 10;
+	int n = 3, c = 0;
 	while (c + 17 < scol.size() && !(scol[c] > scol[c + 1] && scol[c + 8] < scol[c + 9] && scol[c + 11] > scol[c + 12] && scol[c + 13] < scol[c + 14] && scol[c + 14] > scol[c + 15] && scol[c + 16] < scol[c + 17]))
 		c++;
 	if (c + 20 < scol.size() && scol[c + 17] > scol[c + 18] && scol[c + 19] < scol[c + 20])
 		n++;
-	while (r + n * g <= srow.size() && srow[r] < 6)
-		r++;
-	if (c + 9 + n * 3 > scol.size() || r + n * g > srow.size())
+	if (c + 9 + n * 3 > scol.size())
 		return false;
 
-	numbers.clear();
-	for (int i = 0; i < n * g; i++) {
-		auto f = [&](int x) {fields.select(c + x, r + i); return fields.str();};
-		string name = f(0), tips = f(1) + f(2), extra = f(3) + f(4) + f(5) + f(6) + f(7) + f(8);
-		string points = f(9).length() >= f(10).length()? f(9): f(10), score;
-		int value = f(9).length() >= f(10).length()? i + 1: -i - 1, player = 0;
-
-		for (int j = 1; j <= n; j++) {
-			if (n == 4 && i % n == j - 1)
-				continue;
-			if (f(8 + 3 * j).length() > score.length()) {
-				score = f(8 + 3 * j);
-				player = j;
-			}
-		}
-
-		int ext = count(extra.begin(), extra.end(), '+');
-		//numbers.push_back(ext);
-		//numbers.push_back(value);
-		//numbers.push_back(player);
-
-		multimap<int, int> best;
-		for (int g = 0; g < games.size() && i == 0; g++)
-			best.insert({dist(games[g], true, 0, name, tips, ext, points, score), g});
-
-		for (auto it = best.begin(); it != best.end() && numbers.size() < 30; it++) {
-			numbers.push_back(it->first);
-			numbers.push_back(games[it->second].points);
-			numbers.push_back(stoi(games[it->second].name));
-		}
+	if (start == 0) {
+		lists.clear();
+		lists.push_back(List{Line{0, 0, {0, 0, 0, 0}}});
+	} else {
+		lists.resize(1);
+		lists[0].resize(start + 1);
 	}
 
+	for (int i = start; i < srow.size(); i++) {
+		auto f = [&](int x) {fields.select(c + x, i); return fields.str();};
+		string name = f(0), tips = f(1) + f(2), extra = f(3) + f(4) + f(5) + f(6) + f(7) + f(8);
+		int ext = count(extra.begin(), extra.end(), '+');
+
+		multimap<int, tuple<int, int, int>> best;
+		for (int l = 0; l < lists.size(); l++) {
+			for (int g = 0; g < games.size(); g++) {
+				for (int p = 0; p < n; p++) {
+					best.insert({dist(games[g], true, lists[l][i].scores[p], name, tips, ext, f(9), f(11 + 3 * p)), {games[g].points, p, l}});
+					best.insert({dist(games[g], false, lists[l][i].scores[p], name, tips, ext, f(10), f(11 + 3 * p)), {-2 * games[g].points, p, l}});
+				}
+			}
+			best.insert({dist(Game{"", "", 0, 0}, true, 0, name, tips, ext, "", ""), {0, -1, l}});
+			int sum = 0;
+			for (int p = 0; p < n; p++)
+				sum += dist(to_string(abs(lists[l][i].scores[p])), f(11 + 3 * p)) - f(11 + 3 * p).length();
+			best.insert({dist(Game{"", "", 0, 0}, true, 0, name, tips, ext, "", "") + sum, {0, -2, l}});
+		}
+
+		vector<List> nlists;
+		set<tuple<int, int, int>> rep;
+		for (auto it = best.begin(); it != best.end() && it->first == best.begin()->first; it++) {
+			if (rep.count(it->second) != 0)
+				continue;
+			rep.insert(it->second);
+
+			int v, p, l;
+			tie(v, p, l) = it->second;
+			nlists.push_back(lists[l]);
+			nlists.back().push_back(Line{v, p, lists[l][i].scores});
+			if (p >= 0)
+				nlists.back().back().scores[p] += v;
+		}
+		swap(nlists, lists);
+
+		if (start > 0 && (lists.size() > 1 || best.begin()->first > 0))
+			break;
+
+		if (lists.back().back().player == -2)
+			break;
+	}
 
 	return true;
 }
