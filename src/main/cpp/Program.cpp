@@ -175,7 +175,10 @@ void Program::show_results() {
 	int start = 0;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {1.f, 1.f});
-	if (ImGui::BeginTable("", 7, ImGuiTableFlags_Borders)) {
+	if (ImGui::BeginTable("", 6, ImGuiTableFlags_Borders)) {
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("99  ").x);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("-999   ").x);
+
 		int n = 1;
 		auto& l = lists[0];
 		for (int r = 1; r < l.size(); r++) {
@@ -189,21 +192,16 @@ void Program::show_results() {
 
 			ImGui::TableNextColumn();
 			ImGui::SetNextItemWidth(-1);
-			int res = ImGui::InputInt("##1", &l[r].points, 0);
-
-			ImGui::TableNextColumn();
-			ImGui::SetNextItemWidth(-1);
-			if (l[r].points != 0)
-				res += ImGui::SliderInt("##2", &l[r].player, 0, 3);
+			int res = ImGui::InputInt("", &l[r].points, 0);
 
 			for (int i = 0; i < 4; i++) {
 				ImGui::TableNextColumn();
 				ImGui::SetNextItemWidth(-1);
 				ImGui::PushID(i);
 				if (l[r].scores[i] != l[r - 1].scores[i])
-					res += 2 * ImGui::InputInt("##3", &l[r].scores[i], 0);
-				else
-					ImGui::Text("  -");
+					res += 2 * ImGui::InputInt("", &l[r].scores[i], 0);
+				else if (ImGui::Button("-", {ImGui::GetContentRegionAvail().x, 0}))
+					res += (l[r].player = i, 1);
 				ImGui::PopID();
 			}
 
@@ -222,6 +220,9 @@ void Program::show_results() {
 
 	if (start > 0)
 		read_list(start);
+
+	if (lists.size() > 1 && ImGui::Button("Skip"))
+		lists.erase(lists.begin());
 }
 
 void Program::read_field() {
