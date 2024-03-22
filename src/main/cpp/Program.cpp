@@ -174,7 +174,8 @@ void Program::draw() {
 void Program::show_results() {
 	int start = 0;
 
-	if (ImGui::BeginTable("", 7)) {
+	ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {1.f, 1.f});
+	if (ImGui::BeginTable("", 7, ImGuiTableFlags_Borders)) {
 		int n = 1;
 		auto& l = lists[0];
 		for (int r = 1; r < l.size(); r++) {
@@ -182,23 +183,27 @@ void Program::show_results() {
 			ImGui::TableNextRow();
 
 			ImGui::TableNextColumn();
+			ImGui::SetNextItemWidth(-1);
 			if (l[r].points != 0)
 				ImGui::Text("%d", n++);
 
 			ImGui::TableNextColumn();
+			ImGui::SetNextItemWidth(-1);
 			int res = ImGui::InputInt("##1", &l[r].points, 0);
 
 			ImGui::TableNextColumn();
+			ImGui::SetNextItemWidth(-1);
 			if (l[r].points != 0)
 				res += ImGui::SliderInt("##2", &l[r].player, 0, 3);
 
 			for (int i = 0; i < 4; i++) {
 				ImGui::TableNextColumn();
+				ImGui::SetNextItemWidth(-1);
 				ImGui::PushID(i);
 				if (l[r].scores[i] != l[r - 1].scores[i])
 					res += 2 * ImGui::InputInt("##3", &l[r].scores[i], 0);
 				else
-					ImGui::Text("-");
+					ImGui::Text("  -");
 				ImGui::PopID();
 			}
 
@@ -213,6 +218,7 @@ void Program::show_results() {
 		}
 		ImGui::EndTable();
 	}
+	ImGui::PopStyleVar();
 
 	if (start > 0)
 		read_list(start);
@@ -353,8 +359,8 @@ bool Program::read_list(int start) {
 		}
 		swap(nlists, lists);
 
-		if (start > 0 && (lists.size() > 1 || best.begin()->first > 0))
-			break;
+		//if (start > 0 && (lists.size() > 1 || best.begin()->first > 0))
+		//	break;
 
 		if (lists.back().back().player == -2)
 			break;
