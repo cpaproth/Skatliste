@@ -67,6 +67,8 @@ void Program::draw() {
 				convert = read_list(0);
 		} else {
 			ImGui::Checkbox("Big", &proc.big_chars);
+			ImGui::SameLine();
+			ImGui::Checkbox("Faint", &proc.faint_chars);
 		}
 
 		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
@@ -237,8 +239,13 @@ void Program::read_field() {
 			in[j] = fields.data()[j] / 255.f;
 		out = clss.classify(in);
 
+		float sum = 0.f;
 		for (int j = 0; j < out.size(); j++)
-			mem[j * n + i] = out[j];
+			sum += out[j];
+		sum=1.f;
+
+		for (int j = 0; j < out.size(); j++)
+			mem[j * n + i] = out[j] / sum;
 	}
 
 	multimap<float, int, greater<float>> best;
@@ -264,6 +271,21 @@ void Program::read_field() {
 			fields.str().append(chars[*it & 15]);
 
 	fields.separate(1);
+
+	return;
+	fields.str().clear();
+	n = fields.separate(1);
+	for (int i = 0; i < n; i++) {
+		fields.select(0.f, -1, -1, i + 1);
+
+		for (int j = 0; j < in.size(); j++)
+			in[j] = fields.data()[j] / 255.f;
+		out = clss.classify(in);
+		auto m = max_element(out.begin(), out.end());
+		if (m - out.begin() > 10)
+			continue;
+		fields.str().append(chars[m - out.begin()]);
+	}
 }
 
 int Program::dist(const string& s, const string& t) {
@@ -323,6 +345,7 @@ bool Program::read_list(int start) {
 		lists.resize(1);
 		lists[0].resize(start + 1);
 	}
+	vector<int> dists(lists.size(), 0);
 
 	for (int i = start; i < srow.size(); i++) {
 		auto f = [&](int x) {fields.select(c + x, i); return fields.str();};
@@ -333,20 +356,21 @@ bool Program::read_list(int start) {
 		for (int l = 0; l < lists.size(); l++) {
 			for (int g = 0; g < games.size(); g++) {
 				for (int p = 0; p < n; p++) {
-					best.insert({dist(games[g], true, lists[l][i].scores[p], name, tips, ext, f(9), f(11 + 3 * p)), {games[g].points, p, l}});
-					best.insert({dist(games[g], false, lists[l][i].scores[p], name, tips, ext, f(10), f(11 + 3 * p)), {-2 * games[g].points, p, l}});
+					best.insert({dists[l] + dist(games[g], true, lists[l][i].scores[p], name, tips, ext, f(9), f(11 + 3 * p)), {games[g].points, p, l}});
+					best.insert({dists[l] + dist(games[g], false, lists[l][i].scores[p], name, tips, ext, f(10), f(11 + 3 * p)), {-2 * games[g].points, p, l}});
 				}
 			}
-			best.insert({dist(Game{"", "", 0, 0}, true, 0, name, tips, ext, "", ""), {0, -1, l}});
+			best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, ext, "", ""), {0, -1, l}});
 			int sum = 0;
 			for (int p = 0; p < n; p++)
 				sum += dist(to_string(abs(lists[l][i].scores[p])), f(11 + 3 * p)) - f(11 + 3 * p).length();
-			best.insert({dist(Game{"", "", 0, 0}, true, 0, name, tips, ext, "", "") + sum, {0, -2, l}});
+			best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, ext, "", "") + sum, {0, -2, l}});
 		}
 
 		vector<List> nlists;
+		vector<int> ndists;
 		set<tuple<int, int, int>> rep;
-		for (auto it = best.begin(); it != best.end() && it->first == best.begin()->first; it++) {
+		for (auto it = best.begin(); it != best.end() && it->first <= best.begin()->first + 1 && nlists.size() < 100; it++) {
 			if (rep.count(it->second) != 0)
 				continue;
 			rep.insert(it->second);
@@ -357,13 +381,12 @@ bool Program::read_list(int start) {
 			nlists.back().push_back(Line{v, p, lists[l][i].scores});
 			if (p >= 0)
 				nlists.back().back().scores[p] += v;
+			ndists.push_back(it->first);
 		}
 		swap(nlists, lists);
+		swap(ndists, dists);
 
-		//if (start > 0 && (lists.size() > 1 || best.begin()->first > 0))
-		//	break;
-
-		if (lists.back().back().player == -2)
+		if (lists.front().back().player == -2 && i > 10)
 			break;
 	}
 
