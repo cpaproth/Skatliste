@@ -50,6 +50,7 @@ void Program::draw() {
 
 	static bool learn = false;
 	static bool convert = false;
+	static bool simple = false;
 	if (convert) {
 		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
 		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
@@ -69,6 +70,8 @@ void Program::draw() {
 			ImGui::Checkbox("Big", &proc.big_chars);
 			ImGui::SameLine();
 			ImGui::Checkbox("Faint", &proc.faint_chars);
+			ImGui::SameLine();
+			ImGui::Checkbox("Simple", &simple);
 		}
 
 		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
@@ -148,7 +151,7 @@ void Program::draw() {
 		curpos = 0;
 	}
 	for (int i = 0; !cam.cap() && i < 40 && fields.select(curpos, -1); i++, curpos++, learn = convert = false)
-		read_field();
+		read_field(simple);
 
 	int pos = 0;
 	for (auto& l : lines)
@@ -227,7 +230,7 @@ void Program::show_results() {
 		lists.erase(lists.begin());
 }
 
-void Program::read_field() {
+void Program::read_field(bool simple) {
 	fields.str().clear();
 	int n = fields.separate(3), o = Fields::wd / 2;
 	NeuralNet::Values mem(n * chars.size()), in(Fields::wd * Fields::hd), out;
@@ -239,13 +242,8 @@ void Program::read_field() {
 			in[j] = fields.data()[j] / 255.f;
 		out = clss.classify(in);
 
-		float sum = 0.f;
 		for (int j = 0; j < out.size(); j++)
-			sum += out[j];
-		sum=1.f;
-
-		for (int j = 0; j < out.size(); j++)
-			mem[j * n + i] = out[j] / sum;
+			mem[j * n + i] = out[j];
 	}
 
 	multimap<float, int, greater<float>> best;
@@ -256,8 +254,10 @@ void Program::read_field() {
 				sum += mem[j * n + k];
 				ma = max(ma, mem[j * n + k] + mem[j * n + (k > 0? k - 1: 0)] + mem[j * n + (k + 1 < n? k + 1: k)]);
 			}
-			if (ma == mem[j * n + i] + mem[j * n + (i > 0? i - 1: 0)] + mem[j * n + (i + 1 < n? i + 1: i)])
+			if (ma == mem[j * n + i] + mem[j * n + (i > 0? i - 1: 0)] + mem[j * n + (i + 1 < n? i + 1: i)]) {
 				best.insert({sum, (i << 4) + j});
+				i += o;
+			}
 		}
 	}
 
@@ -270,21 +270,23 @@ void Program::read_field() {
 		if ((*it & 15) < 11)
 			fields.str().append(chars[*it & 15]);
 
-	fields.separate(1);
-
-	return;
-	fields.str().clear();
 	n = fields.separate(1);
+
+	if (!simple)
+		return;
+
+	fields.str().clear();
 	for (int i = 0; i < n; i++) {
 		fields.select(0.f, -1, -1, i + 1);
 
 		for (int j = 0; j < in.size(); j++)
 			in[j] = fields.data()[j] / 255.f;
 		out = clss.classify(in);
-		auto m = max_element(out.begin(), out.end());
-		if (m - out.begin() > 10)
+
+		int c = max_element(out.begin(), out.end()) - out.begin();
+		if (c > 10)
 			continue;
-		fields.str().append(chars[m - out.begin()]);
+		fields.str().append(chars[c]);
 	}
 }
 

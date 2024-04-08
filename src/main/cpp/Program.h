@@ -39,7 +39,7 @@ private:
 	std::vector<List> lists;
 
 	void show_results();
-	void read_field();
+	void read_field(bool);
 	int dist(const std::string&, const std::string&);
 	int dist(const Game&, bool, int, const std::string&, const std::string&, int, const std::string&, const std::string&);
 	bool read_list(int);
