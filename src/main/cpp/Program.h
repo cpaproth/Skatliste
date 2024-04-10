@@ -43,4 +43,5 @@ private:
 	int dist(const std::string&, const std::string&);
 	int dist(const Game&, bool, int, const std::string&, const std::string&, int, const std::string&, const std::string&);
 	bool read_list(int);
+	void refine_list();
 };

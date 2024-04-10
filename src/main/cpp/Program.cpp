@@ -50,7 +50,7 @@ void Program::draw() {
 
 	static bool learn = false;
 	static bool convert = false;
-	static bool simple = false;
+	static bool gaps = false;
 	if (convert) {
 		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
 		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
@@ -71,7 +71,7 @@ void Program::draw() {
 			ImGui::SameLine();
 			ImGui::Checkbox("Faint", &proc.faint_chars);
 			ImGui::SameLine();
-			ImGui::Checkbox("Simple", &simple);
+			ImGui::Checkbox("Simple", &gaps);
 		}
 
 		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
@@ -151,7 +151,7 @@ void Program::draw() {
 		curpos = 0;
 	}
 	for (int i = 0; !cam.cap() && i < 40 && fields.select(curpos, -1); i++, curpos++, learn = convert = false)
-		read_field(simple);
+		read_field(gaps);
 
 	int pos = 0;
 	for (auto& l : lines)
@@ -228,9 +228,12 @@ void Program::show_results() {
 
 	if (lists.size() > 1 && ImGui::Button("Skip"))
 		lists.erase(lists.begin());
+
+	if (ImGui::Button("Refine"))
+		refine_list();
 }
 
-void Program::read_field(bool simple) {
+void Program::read_field(bool gaps) {
 	fields.str().clear();
 	int n = fields.separate(3), o = Fields::wd / 2;
 	NeuralNet::Values mem(n * chars.size()), in(Fields::wd * Fields::hd), out;
@@ -272,7 +275,7 @@ void Program::read_field(bool simple) {
 
 	n = fields.separate(1);
 
-	if (!simple)
+	if (!gaps)
 		return;
 
 	fields.str().clear();
@@ -284,9 +287,8 @@ void Program::read_field(bool simple) {
 		out = clss.classify(in);
 
 		int c = max_element(out.begin(), out.end()) - out.begin();
-		if (c > 10)
-			continue;
-		fields.str().append(chars[c]);
+		if (c < 11)
+			fields.str().append(chars[c]);
 	}
 }
 
@@ -395,3 +397,56 @@ bool Program::read_list(int start) {
 	return true;
 }
 
+void Program::refine_list() {
+	set<int> points, rows;
+	for (int g = 0; g < games.size(); g++)
+		points.insert(games[g].points);
+
+	int p = 0, c = 0;
+	for (int i = 1; i < lists[0].size(); i++) {
+		if (lists[0][i].player == p || lists[0][i].player == -2)
+			rows.insert(i);
+	}
+
+	vector<vector<int>> ls{{0}};
+	vector<int> ds{0};
+
+	for (auto rit = rows.begin(); rit != rows.end(); rit++) {
+		auto f = [&](int x) {fields.select(c + x, *rit - 1); return fields.str();};
+
+		multimap<int, tuple<int, int>> best;
+		for (int l = 0; l < ls.size(); l++) {
+			for (auto pit = points.begin(); pit != points.end(); pit++) {
+				if (lists[0][*rit].points > 0)
+					best.insert({ds[l] + dist(f(9), to_string(*pit)) + dist(f(11 + 3 * p), to_string(abs(ls[l].back() + *pit))), {*pit, l}});
+				else if (lists[0][*rit].points < 0)
+					best.insert({ds[l] + dist(f(10), to_string(*pit * 2)) + dist(f(11 + 3 * p), to_string(abs(ls[l].back() - *pit * 2))), {*pit * -2, l}});
+			}
+			if (lists[0][*rit].player == -2)
+				best.insert({ds[l] + dist(f(11 + 3 * p), to_string(abs(ls[l].back()))), {0, l}});
+		}
+
+		vector<vector<int>> nls;
+		vector<int> nds;
+		set<int> rep;
+		for (auto it = best.begin(); it != best.end() && nls.size() < 10000; it++) {
+			int p, l;
+			tie(p, l) = it->second;
+
+			if (rep.count(ls[l].back() + p) != 0)
+				continue;
+			rep.insert(ls[l].back() + p);
+
+			nls.push_back(ls[l]);
+			nls.back().push_back(ls[l].back() + p);
+			nds.push_back(it->first);
+		}
+		swap(nls, ls);
+		swap(nds, ds);
+
+	}
+
+	for (int n = 0; n < 100;n++)
+		cout << ls[n].back() << " " << ds[n] << endl;
+
+}
