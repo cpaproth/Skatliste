@@ -43,12 +43,13 @@ private:
 	static const std::vector<const char*> chars;
 	std::vector<Game> games;
 	std::vector<List> lists;
+	std::vector<int> dists;
 
 	void show_results();
 	bool check_lines();
 	void read_field(bool);
 	int dist(const std::string&, const std::string&);
 	int dist(const Game&, bool, int, const std::string&, const std::string&, int, const std::string&, const std::string&);
-	bool read_list(int);
+	void read_line(int);
 	void refine_list();
 };
