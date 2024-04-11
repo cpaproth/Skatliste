@@ -27,6 +27,12 @@ private:
 	};
 	typedef std::vector<Line> List;
 
+	int cols = 0;
+	int rows = 0;
+	int fcol = 0;
+	int frow = 0;
+	int players = 3;
+
 	GLuint cap_tex = 0;
 	GLuint dig_tex = 0;
 	NdkCam cam;
@@ -39,6 +45,7 @@ private:
 	std::vector<List> lists;
 
 	void show_results();
+	bool check_lines();
 	void read_field(bool);
 	int dist(const std::string&, const std::string&);
 	int dist(const Game&, bool, int, const std::string&, const std::string&, int, const std::string&, const std::string&);

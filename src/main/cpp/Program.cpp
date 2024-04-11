@@ -146,7 +146,7 @@ void Program::draw() {
 		cam.swap_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
 
 	static int curpos = INT_MAX;
-	if (proc.result(lines, fields)) {
+	if (proc.result(lines, fields) && check_lines()) {
 		cam.stop();
 		curpos = 0;
 	}
@@ -231,6 +231,49 @@ void Program::show_results() {
 
 	if (ImGui::Button("Refine"))
 		refine_list();
+}
+
+bool Program::check_lines() {
+	float th = 3.f;
+
+	for (cols = 0; fields.select(cols, 0); cols++);
+	for (rows = 0; fields.select(0, rows); rows++);
+
+	vector<float> ws(cols), hs(rows);
+	for (int c = 0; c < cols; c++) {
+		vector<float> v(rows + 1);
+		for (int r = 0; r < v.size(); r++)
+			v[r] = length(lines[r * cols + c].x - lines[r * cols + c].y);
+		nth_element(v.begin(), v.begin() + rows / 2, v.end());
+		ws[c] = v[rows / 2];
+	}
+	for (int r = 0; r < rows; r++) {
+		vector<float> v(cols + 1);
+		for (int c = 0; c < v.size(); c++)
+			v[c] = length(lines[(rows + 1) * cols + r * (cols + 1) + c].x - lines[(rows + 1) * cols + r * (cols + 1) + c].y);
+		nth_element(v.begin(), v.begin() + cols / 2, v.end());
+		hs[r] = v[cols / 2];
+	}
+
+	for (fcol = 0; fcol + 17 < cols; fcol++) {
+		auto mm1 = minmax_element(ws.begin() + fcol + 1, ws.begin() + fcol + 9);
+		auto mm2 = minmax({ws[fcol + 11], ws[fcol + 14], ws[fcol + 17]});
+		auto mm3 = minmax({ws[fcol + 12], ws[fcol + 13], ws[fcol + 15], ws[fcol + 16]});
+		if (abs(*mm1.first - *mm1.second) < th && abs(mm2.first - mm2.second) < th && abs(mm3.first - mm3.second) < th && abs(ws[fcol + 9] - ws[fcol + 10]) < th && mm2.first > 2.f * max(*mm1.second, mm3.second))
+			break;
+	}
+
+	players = fcol + 20 < cols && abs(ws[fcol + 17] - ws[fcol + 20]) < th? 4: 3;
+
+	for (frow = 0; frow < rows; frow++) {
+		int count = 1;
+		while (frow + count < rows && abs(hs[frow] - hs[frow + count]) < th)
+			count++;
+		if (count > rows / 2)
+			break;
+	}
+
+	return frow < rows && fcol + 8 + players * 3 < cols;
 }
 
 void Program::read_field(bool gaps) {
