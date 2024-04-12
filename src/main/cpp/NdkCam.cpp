@@ -83,7 +83,7 @@ void NdkCam::onimage(void* context, AImageReader* reader) {
 		return;
 
 	AImage* image = 0;
-	AImageReader_acquireNextImage(reader, &image);
+	AImageReader_acquireLatestImage(reader, &image);
 
 	uint8_t *Y = 0, *U = 0, *V = 0;
 	int lY = 0, lU = 0, lV = 0;

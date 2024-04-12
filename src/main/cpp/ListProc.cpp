@@ -267,17 +267,17 @@ ListProc::~ListProc() {
 		worker.join();
 }
 
-void ListProc::scan(vector<uint8_t>& l, int32_t width, int32_t height) {
+void ListProc::scan(const vector<uint8_t>& l, int32_t width, int32_t height) {
 	if (worker.joinable())
 		return;
 
 	w = width;
 	h = height;
-	swap(input, l);
+	input = l;
 	input.resize(w * h);
 
 	ifstream file("/storage/emulated/0/Download/img2.480.ubyte");
-	file.read((char*)input.data(), input.size());
+	//file.read((char*)input.data(), input.size());
 
 	worker = thread(&ListProc::process, this);
 }
@@ -289,18 +289,8 @@ bool ListProc::result(Lines& l, Fields& f) {
 	worker.join();
 	finished = false;
 
-	Lines old;
-	swap(old, l);
 	swap(lines, l);
 	swap(fields, f);
-
-	if (old.size() < 20 || l.size() < 20 || old.size() != l.size())
-		return false;
-
-	for (int i = 0; i < l.size(); i++) {
-		if (length(old[i].x - l[i].x) > 5.f || length(old[i].y - l[i].y) > 5.f)
-			return false;
-	}
 
 //	ofstream file("/storage/emulated/0/Download/img.480.ubyte");
 //	file.write((char*)input.data(), input.size());
@@ -312,7 +302,7 @@ bool ListProc::result(Lines& l, Fields& f) {
 //	ifile >> str;
 //	cout << str << endl;
 
-	return true;
+	return l.size() > 20;
 }
 
 vector<vec2> ListProc::filter(vector<int>& l) {

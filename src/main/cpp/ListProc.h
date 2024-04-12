@@ -80,7 +80,7 @@ public:
 	ListProc();
 	~ListProc();
 
-	void scan(std::vector<uint8_t>&, int32_t, int32_t);
+	void scan(const std::vector<uint8_t>&, int32_t, int32_t);
 	bool result(Lines&, Fields&);
 
 	void get_input(std::function<void(void*, int, int)> f) {f(input.data(), w, h);}

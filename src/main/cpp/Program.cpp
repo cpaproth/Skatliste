@@ -71,7 +71,7 @@ void Program::draw() {
 			ImGui::SameLine();
 			ImGui::Checkbox("Faint", &proc.faint_chars);
 			ImGui::SameLine();
-			ImGui::Checkbox("Simple", &gaps);
+			ImGui::Checkbox("Gaps", &gaps);
 		}
 
 		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
@@ -143,7 +143,7 @@ void Program::draw() {
 	ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)cap_tex, {0.f, 0.f}, {f * w, f * h});
 
 	if (cam.cap())
-		cam.swap_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
+		cam.get_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
 
 	static int curpos = INT_MAX;
 	if (proc.result(lines, fields) && check_lines()) {
@@ -178,10 +178,10 @@ void Program::draw() {
 }
 
 void Program::show_results() {
-	int start = 0;
+	int line = 0;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {1.f, 1.f});
-	if (lists.size() > 0 && ImGui::BeginTable("", 6, ImGuiTableFlags_Borders)) {
+	if (lists.size() > 0 && ImGui::BeginTable("", 2 + players, ImGuiTableFlags_Borders)) {
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("99  ").x);
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("-999   ").x);
 
@@ -200,7 +200,7 @@ void Program::show_results() {
 			ImGui::SetNextItemWidth(-1);
 			int res = ImGui::InputInt("", &l[r].points, 0);
 
-			for (int i = 0; i < 4; i++) {
+			for (int i = 0; i < players; i++) {
 				ImGui::TableNextColumn();
 				ImGui::SetNextItemWidth(-1);
 				ImGui::PushID(i);
@@ -216,7 +216,7 @@ void Program::show_results() {
 				l[r].scores[l[r].player] = l[r - 1].scores[l[r].player] + l[r].points;
 			}
 			if (res > 0)
-				start = r;
+				line = r;
 
 			ImGui::PopID();
 		}
@@ -224,7 +224,7 @@ void Program::show_results() {
 	}
 	ImGui::PopStyleVar();
 
-	read_line(start);
+	read_line(line);
 
 	if (lists.size() > 1 && ImGui::Button("Skip"))
 		lists.erase(lists.begin());
@@ -269,11 +269,11 @@ bool Program::check_lines() {
 		int count = 1;
 		while (frow + count < rows && abs(hs[frow] - hs[frow + count]) < th)
 			count++;
-		if (count > rows / 2)
+		if (count > rows * 3 / 4)
 			break;
 	}
 
-	return frow < rows && fcol + 8 + players * 3 < cols;
+	return frow > 0 && frow < rows && fcol + 8 + players * 3 < cols;
 }
 
 void Program::read_field(bool gaps) {
@@ -365,18 +365,18 @@ int Program::dist(const Game& game, bool win, int last, const string& name, cons
 	return res;
 }
 
-void Program::read_line(int start) {
+void Program::read_line(int line) {
 
 	if (lists.size() == 0) {
 		lists.push_back(List{Line{0, -1, {0, 0, 0, 0}}});
 		dists = {0};
-	} else if (start > 0) {
+	} else if (line > 0) {
 		lists.resize(1);
-		lists[0].resize(start + 1);
+		lists[0].resize(line + 1);
 		dists = {0};
 	}
 
-	int i = start > 0? start: lists[0].size() - 1;
+	int i = line > 0? line: lists[0].size() - 1;
 
 	if (lists.front().back().player == -2 || i >= rows)
 		return;
@@ -389,6 +389,8 @@ void Program::read_line(int start) {
 	for (int l = 0; l < lists.size(); l++) {
 		for (int g = 0; g < games.size(); g++) {
 			for (int p = 0; p < players; p++) {
+				if (players == 4 && (i - frow) % players == p)
+					continue;
 				best.insert({dists[l] + dist(games[g], true, lists[l][i].scores[p], name, tips, ext, f(9), f(11 + 3 * p)), {games[g].points, p, l}});
 				best.insert({dists[l] + dist(games[g], false, lists[l][i].scores[p], name, tips, ext, f(10), f(11 + 3 * p)), {-2 * games[g].points, p, l}});
 			}

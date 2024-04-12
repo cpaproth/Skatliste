@@ -23,16 +23,21 @@ public:
 		std::lock_guard<std::mutex> lg(mut);
 		f(rgba.data(), width, height);
 	}
-	void swap_lum(std::function<void(std::vector<uint8_t>&, int32_t, int32_t)> f) {
+	void get_lum(std::function<void(const std::vector<uint8_t>&, int32_t, int32_t)> f) {
 		std::lock_guard<std::mutex> lg(mut);
 		f(lum, width, height);
 	}
 	void start() {
+		if (capture)
+			return;
+		lum.assign(width * height, 0);
 		ACaptureRequest_setEntry_u8(request, ACAMERA_FLASH_MODE, 1, (uint8_t[]){ACAMERA_FLASH_MODE_TORCH});
 		ACameraCaptureSession_setRepeatingRequest(session, 0, 1, &request, 0);
 		capture = true;
 	}
 	void stop() {
+		if (!capture)
+			return;
 		capture = false;
 		ACameraCaptureSession_stopRepeating(session);
 		ACaptureRequest_setEntry_u8(request, ACAMERA_FLASH_MODE, 1, (uint8_t[]){ACAMERA_FLASH_MODE_OFF});
