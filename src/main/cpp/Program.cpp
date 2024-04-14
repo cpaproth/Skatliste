@@ -224,13 +224,16 @@ void Program::show_results() {
 	}
 	ImGui::PopStyleVar();
 
-	read_line(line);
-
 	if (lists.size() > 1 && ImGui::Button("Skip"))
 		lists.erase(lists.begin());
 
 	if (lists.size() > 0 && ImGui::Button("Refine"))
 		refine_list();
+
+	if (ImGui::Button("Rescan"))
+		proc.rescan();
+
+	read_line(line);
 }
 
 bool Program::check_lines() {
@@ -381,6 +384,10 @@ void Program::read_line(int line) {
 	if (lists.front().back().player == -2 || i >= rows)
 		return;
 
+	ImGui::SetScrollHereY(1.f);
+
+	int o = lists.size() > 1000? 0: 1;
+
 	auto f = [&](int x) {fields.select(fcol + x, i); return fields.str();};
 	string name = f(0), tips = f(1) + f(2), extra = f(3) + f(4) + f(5) + f(6) + f(7) + f(8);
 	int ext = count(extra.begin(), extra.end(), '+');
@@ -405,7 +412,7 @@ void Program::read_line(int line) {
 	vector<List> nlists;
 	dists.clear();
 	set<tuple<int, int, int>> rep;
-	for (auto it = best.begin(); it != best.end() && it->first <= best.begin()->first + 1 && nlists.size() < 100; it++) {
+	for (auto it = best.begin(); it != best.end() && it->first <= best.begin()->first + o; it++) {
 		if (rep.count(it->second) != 0)
 			continue;
 		rep.insert(it->second);

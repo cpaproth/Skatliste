@@ -302,7 +302,7 @@ bool ListProc::result(Lines& l, Fields& f) {
 //	ifile >> str;
 //	cout << str << endl;
 
-	return l.size() > 20;
+	return l.size() > 20 && l.size() == lines.size();
 }
 
 vector<vec2> ListProc::filter(vector<int>& l) {

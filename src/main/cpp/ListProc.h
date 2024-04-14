@@ -81,8 +81,8 @@ public:
 	~ListProc();
 
 	void scan(const std::vector<uint8_t>&, int32_t, int32_t);
+	void rescan() {scan(input, w, h);}
 	bool result(Lines&, Fields&);
-
 	void get_input(std::function<void(void*, int, int)> f) {f(input.data(), w, h);}
 
 private:
