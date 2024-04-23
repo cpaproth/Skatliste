@@ -73,7 +73,7 @@ public:
 	using Lines = std::vector<mat2>;
 
 	int edge_th = 10;
-	int line_th = 50;
+	int line_th = 40;
 	bool big_chars = false;
 	bool faint_chars = false;
 

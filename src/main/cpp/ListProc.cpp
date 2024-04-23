@@ -85,14 +85,14 @@ int Fields::separate(int mode) {
 		uint8_t cmi = 255, cma = 0;
 		for (int y = 0; y < H(); y++) {
 			for (int x = 0; x < W(); x++) {
-				operator()(x, y) = (operator()(x, y) - mi) * 255 / max(1, ma - mi);
 				if (x > 2 && x < W() - 3 && y > 2 && y < H() - 3) {
 					cmi = min(cmi, operator()(x, y));
 					cma = max(cma, operator()(x, y));
 				}
+				operator()(x, y) = (operator()(x, y) - mi) * 255 / max(1, ma - mi);
 			}
 		}
-		if (cma - cmi < 128 && mode < 3)
+		if (cma - cmi < 64)
 			fields[cur].chars.erase(fields[cur].chars.begin() + D - 1);
 	}
 	return fields[cur].chars.size();
@@ -277,7 +277,7 @@ void ListProc::scan(const vector<uint8_t>& l, int32_t width, int32_t height) {
 	input.resize(w * h);
 
 	ifstream file("/storage/emulated/0/Download/img2.480.ubyte");
-	//file.read((char*)input.data(), input.size());
+	file.read((char*)input.data(), input.size());
 
 	worker = thread(&ListProc::process, this);
 }
@@ -498,8 +498,6 @@ void ListProc::process() {
 					float val = (1.f - wx) * (1.f - wy) * m0 + wx * (1.f - wy) * m1 + (1.f - wx) * wy * m2 + wx * wy * m3;
 
 					fields(xf, yf) = clamp(val, 0.f, 255.f);
-					if (faint_chars)
-						fields(xf, yf) = 1.f / (1.f + exp(6.f - fields(xf, yf) / 32.f)) * 255.f;
 					mi = min(mi, fields(xf, yf));
 					ma = max(ma, fields(xf, yf));
 				}

@@ -50,7 +50,6 @@ void Program::draw() {
 
 	static bool learn = false;
 	static bool convert = false;
-	static bool gaps = false;
 	if (convert) {
 		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
 		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
@@ -70,8 +69,6 @@ void Program::draw() {
 			ImGui::Checkbox("Big", &proc.big_chars);
 			ImGui::SameLine();
 			ImGui::Checkbox("Faint", &proc.faint_chars);
-			ImGui::SameLine();
-			ImGui::Checkbox("Gaps", &gaps);
 		}
 
 		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
@@ -153,7 +150,7 @@ void Program::draw() {
 		convert = true;
 	}
 	for (int i = 0; !cam.cap() && i < cols && fields.select(curpos, -1); i++, curpos++, learn = false)
-		read_field(gaps);
+		read_field();
 
 	int pos = 0;
 	for (auto& l : lines)
@@ -279,32 +276,29 @@ bool Program::check_lines() {
 	return frow > 0 && frow < rows && fcol + 8 + players * 3 < cols;
 }
 
-void Program::read_field(bool gaps) {
+void Program::read_field() {
 	fields.str().clear();
 	int n = fields.separate(3), o = Fields::wd / 2;
-	NeuralNet::Values mem(n * chars.size()), in(Fields::wd * Fields::hd), out;
+	NeuralNet::Values mem(n * chars.size(), 0.f), in(Fields::wd * Fields::hd), out;
 
 	for (int i = 0; i < n; i++) {
 		fields.select(0.f, -1, -1, i + 1);
 
 		for (int j = 0; j < in.size(); j++)
-			in[j] = fields.data()[j] / 255.f;
+			in[j] = pow(fields.data()[j] / 255.f, proc.faint_chars? 2.f: 1.f);
 		out = clss.classify(in);
 
 		for (int j = 0; j < out.size(); j++)
-			mem[j * n + i] = out[j];
+			for (int k = max(0, i - o / 2); k < min(n, i + o / 2 + 1); k++)
+				mem[j * n + k] += out[j];
 	}
 
 	multimap<float, int, greater<float>> best;
 	for (int j = 0; j < chars.size(); j++) {
 		for (int i = 0; i < n; i++) {
-			float sum = 0.f, ma = 0.f;
-			for (int k = i >= o? i - o: 0; k < n && k <= i + o; k++) {
-				sum += mem[j * n + k];
-				ma = max(ma, mem[j * n + k] + mem[j * n + (k > 0? k - 1: 0)] + mem[j * n + (k + 1 < n? k + 1: k)]);
-			}
-			if (ma == mem[j * n + i] + mem[j * n + (i > 0? i - 1: 0)] + mem[j * n + (i + 1 < n? i + 1: i)]) {
-				best.insert({sum, (i << 4) + j});
+			float ma = *max_element(&mem[j * n + max(0, i - o)], &mem[j * n + min(n, i + o + 1)]);
+			if (ma == mem[j * n + i]) {
+				best.insert({ma, i * 16 + j});
 				i += o;
 			}
 		}
@@ -312,30 +306,17 @@ void Program::read_field(bool gaps) {
 
 	set<int> digs;
 	float sum = 0.f;
-	for (auto it = best.begin(); it != best.end() && it->first > o * sum / n; sum += it->first, it++)
-		digs.insert(it->second);
+	for (auto it = best.begin(); it != best.end() && it->first > o * sum / n; sum += it->first, it++) {
+		auto dit = digs.lower_bound(it->second & -16);
+		if (dit == digs.end() || (*dit / 16 - it->second / 16) != 0)
+			digs.insert(it->second);
+	}
 
 	for (auto it = digs.begin(); it != digs.end(); it++)
 		if ((*it & 15) < 11)
 			fields.str().append(chars[*it & 15]);
 
-	n = fields.separate(1);
-
-	if (!gaps)
-		return;
-
-	fields.str().clear();
-	for (int i = 0; i < n; i++) {
-		fields.select(0.f, -1, -1, i + 1);
-
-		for (int j = 0; j < in.size(); j++)
-			in[j] = fields.data()[j] / 255.f;
-		out = clss.classify(in);
-
-		int c = max_element(out.begin(), out.end()) - out.begin();
-		if (c < 11)
-			fields.str().append(chars[c]);
-	}
+	fields.separate(1);
 }
 
 int Program::dist(const string& s, const string& t) {
@@ -433,7 +414,7 @@ void Program::refine_list() {
 	for (int g = 0; g < games.size(); g++)
 		points.insert(games[g].points);
 
-	int p = 0, c = fcol;
+	int p = 1, c = fcol;
 	for (int i = 1; i < lists[0].size(); i++) {
 		if (lists[0][i].player == p || lists[0][i].player == -2)
 			rows.insert(i);
@@ -477,7 +458,7 @@ void Program::refine_list() {
 
 	}
 
-	for (int n = 0; n < 10;n++)
+	for (int n = 0; n < 20;n++)
 		cout << ls[n].back() << " " << ds[n] << endl;
 	cout<<endl;
 
