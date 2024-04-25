@@ -259,7 +259,7 @@ bool Program::check_lines() {
 		auto mm1 = minmax_element(ws.begin() + fcol + 1, ws.begin() + fcol + 9);
 		auto mm2 = minmax({ws[fcol + 11], ws[fcol + 14], ws[fcol + 17]});
 		auto mm3 = minmax({ws[fcol + 12], ws[fcol + 13], ws[fcol + 15], ws[fcol + 16]});
-		if (abs(*mm1.first - *mm1.second) < th && abs(mm2.first - mm2.second) < th && abs(mm3.first - mm3.second) < th && abs(ws[fcol + 9] - ws[fcol + 10]) < th && mm2.first > 2.f * max(*mm1.second, mm3.second))
+		if (*mm1.second - *mm1.first < th && mm2.second - mm2.first < th && mm3.second - mm3.first < th && abs(ws[fcol + 9] - ws[fcol + 10]) < th && mm2.first > 2.f * max(*mm1.second, mm3.second))
 			break;
 	}
 
@@ -269,11 +269,15 @@ bool Program::check_lines() {
 		int count = 1;
 		while (frow + count < rows && abs(hs[frow] - hs[frow + count]) < th)
 			count++;
-		if (count > rows * 3 / 4)
+		if (count > rows / 2)
 			break;
 	}
 
-	return frow > 0 && frow < rows && fcol + 8 + players * 3 < cols;
+	float sum = 0.f;
+	for (int c = fcol; c < cols && c < fcol + 9 + players * 3; c++)
+		sum += ws[c];
+
+	return frow > 0 && frow < min(5, rows) && fcol + 9 + players * 3 <= cols && sum > cam.w() * 0.8f;
 }
 
 void Program::read_field() {
@@ -370,8 +374,8 @@ void Program::read_line(int line) {
 	int o = lists.size() > 1000? 0: 1;
 
 	auto f = [&](int x) {fields.select(fcol + x, i); return fields.str();};
-	string name = f(0), tips = f(1) + f(2), extra = f(3) + f(4) + f(5) + f(6) + f(7) + f(8);
-	int ext = count(extra.begin(), extra.end(), '+');
+	string name = f(0), tips = f(1) + f(2);
+	int extra = !f(3).empty() + !f(4).empty() + !f(5).empty() + !f(6).empty() + !f(7).empty() + !f(8).empty();
 
 	multimap<int, tuple<int, int, int>> best;
 	for (int l = 0; l < lists.size(); l++) {
@@ -379,15 +383,15 @@ void Program::read_line(int line) {
 			for (int p = 0; p < players; p++) {
 				if (players == 4 && (i - frow) % players == p)
 					continue;
-				best.insert({dists[l] + dist(games[g], true, lists[l][i].scores[p], name, tips, ext, f(9), f(11 + 3 * p)), {games[g].points, p, l}});
-				best.insert({dists[l] + dist(games[g], false, lists[l][i].scores[p], name, tips, ext, f(10), f(11 + 3 * p)), {-2 * games[g].points, p, l}});
+				best.insert({dists[l] + dist(games[g], true, lists[l][i].scores[p], name, tips, extra, f(9), f(11 + 3 * p)), {games[g].points, p, l}});
+				best.insert({dists[l] + dist(games[g], false, lists[l][i].scores[p], name, tips, extra, f(10), f(11 + 3 * p)), {-2 * games[g].points, p, l}});
 			}
 		}
-		best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, ext, "", ""), {0, -1, l}});
+		best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, extra, "", ""), {0, -1, l}});
 		int sum = 0;
 		for (int p = 0; p < players; p++)
 			sum += dist(to_string(abs(lists[l][i].scores[p])), f(11 + 3 * p)) - f(11 + 3 * p).length();
-		best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, ext, "", "") + sum, {0, -2, l}});
+		best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, extra, "", "") + sum, {0, -2, l}});
 	}
 
 	vector<List> nlists;
