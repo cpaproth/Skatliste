@@ -42,14 +42,19 @@ private:
 	Classifier clss;
 	static const std::vector<const char*> chars;
 	std::vector<Game> games;
-	std::vector<List> lists;
-	std::vector<int> dists;
+
+	std::thread worker;
+	std::atomic<bool> converting;
+	std::mutex mut;
+	List toplist;
 
 	void show_results();
 	bool check_lines();
 	void read_field();
 	int dist(const std::string&, const std::string&);
 	int dist(const Game&, bool, int, const std::string&, const std::string&, int, const std::string&, const std::string&);
-	void read_line(int);
-	void refine_list();
+
+	//void refine_list();
+
+	void process();
 };

@@ -10,7 +10,7 @@ using namespace std;
 
 const vector<const char*> Program::chars{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-"};
 
-Program::Program() : cam(480, 640, 0), clss(Fields::wd, Fields::hd, chars.size()) {
+Program::Program() : cam(480, 640, 0), clss(Fields::wd, Fields::hd, chars.size()), converting(false) {
 	glEnable(GL_TEXTURE_2D);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	for (auto tex : {&cap_tex, &dig_tex}) {
@@ -42,6 +42,9 @@ Program::Program() : cam(480, 640, 0), clss(Fields::wd, Fields::hd, chars.size()
 }
 
 Program::~Program() {
+	converting = false;
+	if (worker.joinable())
+		worker.join();
 	for (auto tex : {&cap_tex, &dig_tex})
 		glDeleteTextures(1, tex);
 }
@@ -54,23 +57,27 @@ void Program::draw() {
 		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
 		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
 	}
+
 	ImGui::Begin(convert? "Skat List##1": "Skat List##2", learn? &learn: convert? &convert: 0);
 	if (!learn && !convert) {
+		converting = false;
+		if (worker.joinable())
+			worker.join();
+
 		if (ImGui::Button(cam.cap()? "Stop": "Scan"))
 			cam.cap()? cam.stop(): cam.start();
-		ImGui::SameLine();
 		if (!cam.cap() && fields.select()) {
+			ImGui::SameLine();
 			if (ImGui::Button("Learn"))
 				learn = fields.first();
 			ImGui::SameLine();
-			if (ImGui::Button("Convert"))
-				convert = true;
-		} else {
-			ImGui::Checkbox("Big", &proc.big_chars);
-			ImGui::SameLine();
-			ImGui::Checkbox("Faint", &proc.faint_chars);
+			if (ImGui::Button("Rescan"))
+				proc.rescan();
 		}
 
+		ImGui::Checkbox("Big", &proc.big_chars);
+		ImGui::SameLine();
+		ImGui::Checkbox("Faint", &proc.faint_chars);
 		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
 		ImGui::SliderInt("Line", &proc.line_th, 1, 100);
 
@@ -142,15 +149,10 @@ void Program::draw() {
 	if (cam.cap())
 		cam.get_lum(bind(&ListProc::scan, &proc, _1, _2, _3));
 
-	static int curpos = INT_MAX;
 	if (proc.result(lines, fields) && check_lines()) {
 		cam.stop();
-		curpos = frow * cols;
-		lists.clear();
 		convert = true;
 	}
-	for (int i = 0; !cam.cap() && i < cols && fields.select(curpos, -1); i++, curpos++, learn = false)
-		read_field();
 
 	int pos = 0;
 	for (auto& l : lines)
@@ -175,15 +177,50 @@ void Program::draw() {
 }
 
 void Program::show_results() {
-	int line = 0;
+
+	if (!worker.joinable()) {
+		toplist.clear();
+		worker = thread(&Program::process, this);
+	} else if (!converting) {
+		worker.join();
+		worker = thread(&Program::process, this);
+	}
 
 	ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {1.f, 1.f});
-	if (lists.size() > 0 && ImGui::BeginTable("", 2 + players, ImGuiTableFlags_Borders)) {
+	if (ImGui::BeginTable("", 2 + players, ImGuiTableFlags_Borders)) {
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("99  ").x);
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("-999   ").x);
 
+		lock_guard<std::mutex> lg(mut);
+		auto& l = toplist;
+		vector<pair<int, int>> wl(players, {0, 0});
+		int won = 0, lost = 0;
+
+		for (int r = 1; r < l.size(); r++) {
+			if (l[r].points > 0 && l[r].player >= 0) {
+				wl[l[r].player].first++;
+				won++;
+			} else if (l[r].points < 0 && l[r].player >= 0) {
+				wl[l[r].player].second++;
+				lost++;
+			}
+		}
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::SetNextItemWidth(-1);
+		ImGui::Text("%d", won + lost);
+		ImGui::TableNextColumn();
+		for (int i = 0; i < players && l.size() > 0; i++) {
+			ImGui::TableNextColumn();
+			ImGui::SetNextItemWidth(-1);
+			ImGui::Text("%d", l.back().scores[i]);
+			ImGui::Text("%d/%d", wl[i].first, wl[i].second);
+			ImGui::Text("%d", (wl[i].first - wl[i].second) * 50);
+			ImGui::Text("%d", (lost - wl[i].second) * (players == 3? 40: 30));
+			ImGui::Text("%d", l.back().scores[i] + (wl[i].first - wl[i].second) * 50 + (lost - wl[i].second) * (players == 3? 40: 30));
+		}
+
 		int n = 1;
-		auto& l = lists[0];
 		for (int r = 1; r < l.size(); r++) {
 			ImGui::PushID(r);
 			ImGui::TableNextRow();
@@ -212,25 +249,16 @@ void Program::show_results() {
 				l[r].scores = l[r - 1].scores;
 				l[r].scores[l[r].player] = l[r - 1].scores[l[r].player] + l[r].points;
 			}
-			if (res > 0)
-				line = r;
+			if (res > 0) {
+				l.resize(r + 1);
+				converting = false;
+			}
 
 			ImGui::PopID();
 		}
 		ImGui::EndTable();
 	}
 	ImGui::PopStyleVar();
-
-	if (lists.size() > 1 && ImGui::Button("Skip"))
-		lists.erase(lists.begin());
-
-	if (lists.size() > 0 && ImGui::Button("Refine"))
-		refine_list();
-
-	if (ImGui::Button("Rescan"))
-		proc.rescan();
-
-	read_line(line);
 }
 
 bool Program::check_lines() {
@@ -277,7 +305,7 @@ bool Program::check_lines() {
 	for (int c = fcol; c < cols && c < fcol + 9 + players * 3; c++)
 		sum += ws[c];
 
-	return frow > 0 && frow < min(5, rows) && fcol + 9 + players * 3 <= cols && sum > cam.w() * 0.8f;
+	return frow > 0 && frow < min(5, rows) && fcol + 9 + players * 3 <= cols && sum > cam.w() * 0.75f;
 }
 
 void Program::read_field() {
@@ -353,67 +381,7 @@ int Program::dist(const Game& game, bool win, int last, const string& name, cons
 	return res;
 }
 
-void Program::read_line(int line) {
-
-	if (lists.size() == 0) {
-		lists.push_back(List{Line{0, -1, {0, 0, 0, 0}}});
-		dists = {0};
-	} else if (line > 0) {
-		lists.resize(1);
-		lists[0].resize(line + 1);
-		dists = {0};
-	}
-
-	int i = line > 0? line: lists[0].size() - 1;
-
-	if (lists.front().back().player == -2 || i >= rows)
-		return;
-
-	ImGui::SetScrollHereY(1.f);
-
-	int o = lists.size() > 1000? 0: 1;
-
-	auto f = [&](int x) {fields.select(fcol + x, i); return fields.str();};
-	string name = f(0), tips = f(1) + f(2);
-	int extra = !f(3).empty() + !f(4).empty() + !f(5).empty() + !f(6).empty() + !f(7).empty() + !f(8).empty();
-
-	multimap<int, tuple<int, int, int>> best;
-	for (int l = 0; l < lists.size(); l++) {
-		for (int g = 0; g < games.size(); g++) {
-			for (int p = 0; p < players; p++) {
-				if (players == 4 && (i - frow) % players == p)
-					continue;
-				best.insert({dists[l] + dist(games[g], true, lists[l][i].scores[p], name, tips, extra, f(9), f(11 + 3 * p)), {games[g].points, p, l}});
-				best.insert({dists[l] + dist(games[g], false, lists[l][i].scores[p], name, tips, extra, f(10), f(11 + 3 * p)), {-2 * games[g].points, p, l}});
-			}
-		}
-		best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, extra, "", ""), {0, -1, l}});
-		int sum = 0;
-		for (int p = 0; p < players; p++)
-			sum += dist(to_string(abs(lists[l][i].scores[p])), f(11 + 3 * p)) - f(11 + 3 * p).length();
-		best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, extra, "", "") + sum, {0, -2, l}});
-	}
-
-	vector<List> nlists;
-	dists.clear();
-	set<tuple<int, int, int>> rep;
-	for (auto it = best.begin(); it != best.end() && it->first <= best.begin()->first + o; it++) {
-		if (rep.count(it->second) != 0)
-			continue;
-		rep.insert(it->second);
-
-		int v, p, l;
-		tie(v, p, l) = it->second;
-		nlists.push_back(lists[l]);
-		nlists.back().push_back(Line{v, p, lists[l][i].scores});
-		if (p >= 0)
-			nlists.back().back().scores[p] += v;
-		dists.push_back(it->first);
-	}
-	swap(nlists, lists);
-}
-
-void Program::refine_list() {
+/*void Program::refine_list() {
 	set<int> points, rows;
 	for (int g = 0; g < games.size(); g++)
 		points.insert(games[g].points);
@@ -466,4 +434,81 @@ void Program::refine_list() {
 		cout << ls[n].back() << " " << ds[n] << endl;
 	cout<<endl;
 
+}*/
+
+void Program::process() {
+	converting = true;
+
+	vector<List> lists;
+	vector<int> dists(1, 0);
+
+	if (toplist.size() == 0) {
+		lists.push_back(List{Line{0, -1, {0, 0, 0, 0}}});
+	} else {
+		lock_guard<std::mutex> lg(mut);
+		lists.push_back(toplist);
+	}
+
+	for (int i = lists[0].size() - 1; i < rows; i++) {
+
+		for (int c = 0; c < cols && i >= frow && fields.select(c, i); c++)
+			read_field();
+
+		auto f = [&](int x) {fields.select(fcol + x, i); return fields.str();};
+		string name = f(0), tips = f(1) + f(2);
+		int extra = !f(3).empty() + !f(4).empty() + !f(5).empty() + !f(6).empty() + !f(7).empty() + !f(8).empty();
+
+		multimap<int, tuple<int, int, int>> best;
+		for (int l = 0; l < lists.size(); l++) {
+			for (int g = 0; g < games.size(); g++) {
+				for (int p = 0; p < players; p++) {
+					if (players == 4 && (i - frow) % players == p)
+						continue;
+					best.insert({dists[l] +
+								 dist(games[g], true, lists[l][i].scores[p], name, tips, extra,
+									  f(9), f(11 + 3 * p)), {games[g].points, p, l}});
+					best.insert({dists[l] +
+								 dist(games[g], false, lists[l][i].scores[p], name, tips, extra,
+									  f(10), f(11 + 3 * p)), {-2 * games[g].points, p, l}});
+				}
+			}
+			best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, extra, "", ""), {0, -1, l}});
+			int sum = 0;
+			for (int p = 0; p < players; p++)
+				sum += dist(to_string(abs(lists[l][i].scores[p])), f(11 + 3 * p)) - f(11 + 3 * p).length();
+			best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, extra, "", "") + sum, {0, -2, l}});
+
+			if (!converting)
+				return;
+		}
+
+		vector<List> nlists;
+		dists.clear();
+		set<tuple<int, int, int>> rep;
+		int o = lists.size() > 1000? 0: 1;
+		for (auto it = best.begin(); it != best.end() && it->first <= best.begin()->first + o; it++) {
+			if (rep.count(it->second) != 0)
+				continue;
+			rep.insert(it->second);
+
+			int v, p, l;
+			tie(v, p, l) = it->second;
+			nlists.push_back(lists[l]);
+			nlists.back().push_back(Line{v, p, lists[l][i].scores});
+			if (p >= 0)
+				nlists.back().back().scores[p] += v;
+			dists.push_back(it->first);
+
+			if (!converting)
+				return;
+		}
+		swap(nlists, lists);
+
+		lock_guard<std::mutex> lg(mut);
+		toplist = lists[0];
+
+		if (lists.front().back().player == -2)
+			break;
+
+	}
 }
