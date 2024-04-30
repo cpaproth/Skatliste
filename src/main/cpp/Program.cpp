@@ -158,7 +158,7 @@ void Program::draw() {
 	for (auto& l : lines)
 		ImGui::GetBackgroundDrawList()->AddLine({f * l.x.x, f * l.x.y}, {f * l.y.x, f * l.y.y}, fields.check(pos++)? 0xff00ff00: 0xff0000ff);
 
-	if (!ImGui::GetIO().WantCaptureMouse && ImGui::GetIO().MouseClicked[0] && ImGui::GetIO().MousePos.y / f < h) {
+	if (!ImGui::GetIO().WantCaptureMouse && ImGui::GetIO().MouseClicked[0] && ImGui::GetIO().MousePos.y / f < h && !convert) {
 		float l = FLT_MAX;
 		pos = 0;
 		vec2 mouse(ImGui::GetIO().MousePos.x / f, ImGui::GetIO().MousePos.y / f);
@@ -193,46 +193,56 @@ void Program::show_results() {
 
 		lock_guard<std::mutex> lg(mut);
 		auto& l = toplist;
-		vector<pair<int, int>> wl(players, {0, 0});
-		int won = 0, lost = 0;
+		vector<int> won(players, 0), lost(players, 0), score(players, 0);
+		int sumw = 0, suml = 0;
 
 		for (int r = 1; r < l.size(); r++) {
 			if (l[r].points > 0 && l[r].player >= 0) {
-				wl[l[r].player].first++;
-				won++;
+				won[l[r].player]++;
+				score[l[r].player] += l[r].points;
+				sumw++;
 			} else if (l[r].points < 0 && l[r].player >= 0) {
-				wl[l[r].player].second++;
-				lost++;
+				lost[l[r].player]++;
+				score[l[r].player] += l[r].points;
+				suml++;
 			}
 		}
+
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		ImGui::SetNextItemWidth(-1);
-		ImGui::Text("%d", won + lost);
+		ImGui::Text("%d", sumw + suml);
 		ImGui::TableNextColumn();
 		for (int i = 0; i < players && l.size() > 0; i++) {
+			ImGui::PushID(i);
+			ImGui::PushStyleColor(ImGuiCol_Button, {0.f, 0.5f, 0.5f, 1.f});
 			ImGui::TableNextColumn();
 			ImGui::SetNextItemWidth(-1);
-			ImGui::Text("%d", l.back().scores[i]);
-			ImGui::Text("%d/%d", wl[i].first, wl[i].second);
-			ImGui::Text("%d", (wl[i].first - wl[i].second) * 50);
-			ImGui::Text("%d", (lost - wl[i].second) * (players == 3? 40: 30));
-			ImGui::Text("%d", l.back().scores[i] + (wl[i].first - wl[i].second) * 50 + (lost - wl[i].second) * (players == 3? 40: 30));
+			ImGui::Button((to_string(score[i]) + "##1").c_str(), {ImGui::GetContentRegionAvail().x, 0});
+			ImGui::Text("%d/%d", won[i], lost[i]);
+			ImGui::Text("%d", (won[i] - lost[i]) * 50);
+			ImGui::Text("%d", (suml - lost[i]) * (players == 3? 40: 30));
+			ImGui::Button((to_string(score[i] + (won[i] - lost[i]) * 50 + (suml - lost[i]) * (players == 3? 40: 30)) + "##2").c_str(), {ImGui::GetContentRegionAvail().x, 0});
+			ImGui::Text("");
+			ImGui::PopStyleColor();
+			ImGui::PopID();
 		}
 
 		int n = 1;
 		for (int r = 1; r < l.size(); r++) {
+			int res = 0;
+
 			ImGui::PushID(r);
 			ImGui::TableNextRow();
 
 			ImGui::TableNextColumn();
 			ImGui::SetNextItemWidth(-1);
-			if (l[r].points != 0)
-				ImGui::Text("%d", n++);
+			if (l[r].points != 0 &&	ImGui::Button(to_string(n++).c_str(), {ImGui::GetContentRegionAvail().x, 0}))
+				res += (l[r].points = 0, 1);
 
 			ImGui::TableNextColumn();
 			ImGui::SetNextItemWidth(-1);
-			int res = ImGui::InputInt("", &l[r].points, 0);
+			res += ImGui::InputInt("", &l[r].points, 0);
 
 			for (int i = 0; i < players; i++) {
 				ImGui::TableNextColumn();
