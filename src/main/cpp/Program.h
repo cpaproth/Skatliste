@@ -14,6 +14,12 @@ public:
 	void draw();
 
 private:
+	struct Player {
+		std::string name;
+		bool plays;
+		int score;
+		std::vector<int> scores;
+	};
 	struct Game {
 		std::string name;
 		std::string tips;
@@ -27,11 +33,14 @@ private:
 	};
 	typedef std::vector<Line> List;
 
+	bool learn = false;
+	bool convert = false;
+	bool list = false;
 	int cols = 0;
 	int rows = 0;
 	int fcol = 0;
 	int frow = 0;
-	int players = 3;
+	int nplayer = 3;
 
 	GLuint cap_tex = 0;
 	GLuint dig_tex = 0;
@@ -41,6 +50,7 @@ private:
 	Fields fields;
 	Classifier clss;
 	static const std::vector<const char*> chars;
+	std::vector<Player> players;
 	std::vector<Game> games;
 
 	std::thread worker;
@@ -48,6 +58,7 @@ private:
 	std::mutex mut;
 	List toplist;
 
+	void show_list();
 	void show_results();
 	bool check_lines();
 	void read_field();

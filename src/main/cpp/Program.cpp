@@ -3,7 +3,6 @@
 #include "Program.h"
 #include "imgui.h"
 #include <map>
-
 #include <iostream>
 
 using namespace std;
@@ -21,6 +20,10 @@ Program::Program() : cam(480, 640, 0), clss(Fields::wd, Fields::hd, chars.size()
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
+
+	players.push_back({"Hans Franz", true, 100, {200, 300}});
+	players.push_back({"Klaus Glück", true, 100, {200, 300}});
+	players.push_back({"Sabine Gutherz", true, 100, {200, 300}});
 
 	for (int n = 9; n <= 12; n++) {
 		for (int g = 2; g <= 18; g++) {
@@ -50,22 +53,26 @@ Program::~Program() {
 }
 
 void Program::draw() {
-
-	static bool learn = false;
-	static bool convert = false;
-	if (convert) {
+	if (convert || list) {
 		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
 		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
 	}
 
-	ImGui::Begin(convert? "Skat List##1": "Skat List##2", learn? &learn: convert? &convert: 0);
-	if (!learn && !convert) {
+	ImGui::Begin(convert || list? "Skat List##1": "Skat List##2", list? &list: learn? &learn: convert? &convert: 0);
+	if (list) {
+		show_list();
+	} else if (convert) {
+		show_results();
+	} else if (!learn) {
 		converting = false;
 		if (worker.joinable())
 			worker.join();
 
 		if (ImGui::Button(cam.cap()? "Stop": "Scan"))
 			cam.cap()? cam.stop(): cam.start();
+		ImGui::SameLine();
+		if (ImGui::Button("List"))
+			list = true;
 		if (!cam.cap() && fields.select()) {
 			ImGui::SameLine();
 			if (ImGui::Button("Learn"))
@@ -90,8 +97,6 @@ void Program::draw() {
 			ImGui::InputInt("FieldY", &fields.Y);
 			ImGui::InputInt("FieldD", &fields.D);
 		}
-	} else if (convert) {
-		show_results();
 	} else if (fields.select()) {
 		ImGui::BeginGroup();
 		int val = ImGui::Button("S0") + ImGui::Button("S1") * 2 + ImGui::Button("S2") * 3 - 1;
@@ -176,8 +181,49 @@ void Program::draw() {
 	this_thread::sleep_for(chrono::milliseconds(30));
 }
 
-void Program::show_results() {
+void Program::show_list() {
+	auto sortname = [](const Player& a, const Player& b) {return a.plays && !b.plays || a.plays == b.plays && a.name < b.name;};
 
+	//ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {1.f, 1.f});
+	if (ImGui::BeginTable("##1", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) {
+		ImGui::TableSetupScrollFreeze(1, 1);
+		ImGui::TableNextRow();
+		ImGui::TableNextColumn();
+		ImGui::SetNextItemWidth(-1);
+
+		static char name[20] = "";
+		ImGui::InputText("", name, sizeof(name));
+		if (ImGui::Button("Add") && name[0] != 0) {
+			auto it = find_if(players.begin(), players.end(), [](const Player& p) {return p.name == name;});
+			if (it == players.end())
+				players.push_back({name, true});
+			else
+				it->plays = true;
+			sort(players.begin(), players.end(), sortname);
+			name[0] = 0;
+		}
+
+
+		for (int r = 0; r < players.size(); r++) {
+			ImGui::PushID(r);
+			ImGui::TableNextRow();
+			ImGui::TableNextColumn();
+			if (ImGui::Selectable(players[r].name.c_str(), &players[r].plays))
+				sort(players.begin(), players.end(), sortname);
+
+			for (int c = 0; c < 4; c++) {
+				ImGui::TableNextColumn();
+				ImGui::Text("Martin Maier");
+			}
+			ImGui::PopID();
+		}
+
+		ImGui::EndTable();
+	}
+	//ImGui::PopStyleVar();
+}
+
+void Program::show_results() {
 	if (!worker.joinable()) {
 		toplist.clear();
 		worker = thread(&Program::process, this);
@@ -187,13 +233,14 @@ void Program::show_results() {
 	}
 
 	ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {1.f, 1.f});
-	if (ImGui::BeginTable("", 2 + players, ImGuiTableFlags_Borders)) {
+	if (ImGui::BeginTable("##2", 2 + nplayer, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY)) {
+		ImGui::TableSetupScrollFreeze(0, 1);
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("99  ").x);
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("-999   ").x);
 
 		lock_guard<std::mutex> lg(mut);
 		auto& l = toplist;
-		vector<int> won(players, 0), lost(players, 0), score(players, 0);
+		vector<int> won(nplayer, 0), lost(nplayer, 0), score(nplayer, 0);
 		int sumw = 0, suml = 0;
 
 		for (int r = 1; r < l.size(); r++) {
@@ -211,20 +258,34 @@ void Program::show_results() {
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		ImGui::SetNextItemWidth(-1);
+		ImGui::SetWindowFontScale(2.f);
 		ImGui::Text("%d", sumw + suml);
+		ImGui::SetWindowFontScale(1.f);
 		ImGui::TableNextColumn();
-		for (int i = 0; i < players && l.size() > 0; i++) {
+		for (int i = 0; i < nplayer && l.size() > 0; i++) {
 			ImGui::PushID(i);
 			ImGui::PushStyleColor(ImGuiCol_Button, {0.f, 0.5f, 0.5f, 1.f});
+			ImGui::PushStyleColor(ImGuiCol_FrameBg, {0.f, 0.5f, 0.5f, 1.f});
 			ImGui::TableNextColumn();
 			ImGui::SetNextItemWidth(-1);
-			ImGui::Button((to_string(score[i]) + "##1").c_str(), {ImGui::GetContentRegionAvail().x, 0});
+
+			vector<int> vals(100, 1234);//{score[i], 123, 987, 1523, -997};
+			if (ImGui::BeginCombo("##1", to_string(score[i]).c_str(), ImGuiComboFlags_NoArrowButton)) {
+				for (int  j = 0; j < vals.size(); j++) {
+					if (ImGui::Selectable(to_string(vals[j]).c_str()))
+						cout << vals[j] << endl;
+				}
+				ImGui::EndCombo();
+			}
+
 			ImGui::Text("%d/%d", won[i], lost[i]);
 			ImGui::Text("%d", (won[i] - lost[i]) * 50);
-			ImGui::Text("%d", (suml - lost[i]) * (players == 3? 40: 30));
-			ImGui::Button((to_string(score[i] + (won[i] - lost[i]) * 50 + (suml - lost[i]) * (players == 3? 40: 30)) + "##2").c_str(), {ImGui::GetContentRegionAvail().x, 0});
+			ImGui::Text("%d", (suml - lost[i]) * (nplayer == 3? 40: 30));
+			int result = score[i] + (won[i] - lost[i]) * 50 + (suml - lost[i]) * (nplayer == 3? 40: 30);
+			if (ImGui::Button((to_string(result) + "##2").c_str(), {ImGui::GetContentRegionAvail().x, 0}))
+				list = true;
 			ImGui::Text("");
-			ImGui::PopStyleColor();
+			ImGui::PopStyleColor(2);
 			ImGui::PopID();
 		}
 
@@ -244,7 +305,7 @@ void Program::show_results() {
 			ImGui::SetNextItemWidth(-1);
 			res += ImGui::InputInt("", &l[r].points, 0);
 
-			for (int i = 0; i < players; i++) {
+			for (int i = 0; i < nplayer; i++) {
 				ImGui::TableNextColumn();
 				ImGui::SetNextItemWidth(-1);
 				ImGui::PushID(i);
@@ -301,7 +362,7 @@ bool Program::check_lines() {
 			break;
 	}
 
-	players = fcol + 20 < cols && abs(ws[fcol + 17] - ws[fcol + 20]) < th? 4: 3;
+	nplayer = fcol + 20 < cols && abs(ws[fcol + 17] - ws[fcol + 20]) < th? 4: 3;
 
 	for (frow = 0; frow < rows; frow++) {
 		int count = 1;
@@ -312,10 +373,10 @@ bool Program::check_lines() {
 	}
 
 	float sum = 0.f;
-	for (int c = fcol; c < cols && c < fcol + 9 + players * 3; c++)
+	for (int c = fcol; c < cols && c < fcol + 9 + nplayer * 3; c++)
 		sum += ws[c];
 
-	return frow > 0 && frow < min(5, rows) && fcol + 9 + players * 3 <= cols && sum > cam.w() * 0.75f;
+	return frow > 0 && frow < min(5, rows) && fcol + 9 + nplayer * 3 <= cols && sum > cam.w() * 0.75f;
 }
 
 void Program::read_field() {
@@ -471,8 +532,8 @@ void Program::process() {
 		multimap<int, tuple<int, int, int>> best;
 		for (int l = 0; l < lists.size(); l++) {
 			for (int g = 0; g < games.size(); g++) {
-				for (int p = 0; p < players; p++) {
-					if (players == 4 && (i - frow) % players == p)
+				for (int p = 0; p < nplayer; p++) {
+					if (nplayer == 4 && (i - frow) % nplayer == p)
 						continue;
 					best.insert({dists[l] +
 								 dist(games[g], true, lists[l][i].scores[p], name, tips, extra,
@@ -484,7 +545,7 @@ void Program::process() {
 			}
 			best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, extra, "", ""), {0, -1, l}});
 			int sum = 0;
-			for (int p = 0; p < players; p++)
+			for (int p = 0; p < nplayer; p++)
 				sum += dist(to_string(abs(lists[l][i].scores[p])), f(11 + 3 * p)) - f(11 + 3 * p).length();
 			best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, extra, "", "") + sum, {0, -2, l}});
 
