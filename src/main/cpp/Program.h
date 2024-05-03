@@ -57,6 +57,7 @@ private:
 	std::atomic<bool> converting;
 	std::mutex mut;
 	List toplist;
+	std::array<std::vector<int>, 4> topscores;
 
 	void show_list();
 	void show_results();
@@ -64,8 +65,5 @@ private:
 	void read_field();
 	int dist(const std::string&, const std::string&);
 	int dist(const Game&, bool, int, const std::string&, const std::string&, int, const std::string&, const std::string&);
-
-	//void refine_list();
-
 	void process();
 };
