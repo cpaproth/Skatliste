@@ -41,6 +41,7 @@ private:
 	int fcol = 0;
 	int frow = 0;
 	int nplayer = 3;
+	int result = 0;
 
 	GLuint cap_tex = 0;
 	GLuint dig_tex = 0;

@@ -184,24 +184,29 @@ void Program::draw() {
 void Program::show_list() {
 	auto sortname = [](const Player& a, const Player& b) {return a.plays && !b.plays || a.plays == b.plays && a.name < b.name;};
 
-	//ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {1.f, 1.f});
 	if (ImGui::BeginTable("##1", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) {
 		ImGui::TableSetupScrollFreeze(1, 1);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("-999   ---+++").x);
+
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		ImGui::SetNextItemWidth(-1);
-
 		static char name[20] = "";
-		ImGui::InputText("", name, sizeof(name));
-		if (ImGui::Button("Add") && name[0] != 0) {
-			auto it = find_if(players.begin(), players.end(), [](const Player& p) {return p.name == name;});
-			if (it == players.end())
+		ImGui::InputText("##1", name, sizeof(name));
+		auto it = find_if(players.begin(), players.end(), [](const Player& p) {return p.name == name;});
+		if (ImGui::Button(name[0] == 0? "Sort": it == players.end()? "Add": "Del")) {
+			if (it == players.end() && name[0] != 0)
 				players.push_back({name, true});
-			else
-				it->plays = true;
+			else if (name[0] != 0)
+				players.erase(it);
 			sort(players.begin(), players.end(), sortname);
 			name[0] = 0;
 		}
+
+		ImGui::SetNextItemWidth(-1);
+		ImGui::TableNextColumn();
+		ImGui::InputInt("##2", &result);
 
 
 		for (int r = 0; r < players.size(); r++) {
@@ -211,16 +216,23 @@ void Program::show_list() {
 			if (ImGui::Selectable((to_string(r + 1) + ". " + players[r].name).c_str(), &players[r].plays))
 				sort(players.begin(), players.end(), sortname);
 
-			for (int c = 0; c < 4; c++) {
+			ImGui::TableNextColumn();
+			if (players[r].plays && ImGui::Button(to_string(players[r].score).c_str())) {
+				players[r].score = result;
+				list = !convert;
+			} else if (!players[r].plays) {
+				ImGui::Text("%d", players[r].score);
+			}
+
+			for (int c = 0; c < 3; c++) {
 				ImGui::TableNextColumn();
-				ImGui::Text("Martin Maier");
+				ImGui::Text("200");
 			}
 			ImGui::PopID();
 		}
 
 		ImGui::EndTable();
 	}
-	//ImGui::PopStyleVar();
 }
 
 void Program::show_results() {
@@ -230,6 +242,7 @@ void Program::show_results() {
 		worker = thread(&Program::process, this);
 	} else if (!converting) {
 		worker.join();
+		topscores.fill({0});
 		worker = thread(&Program::process, this);
 	}
 
@@ -281,9 +294,11 @@ void Program::show_results() {
 			ImGui::Text("%d/%d", won[i], lost[i]);
 			ImGui::Text("%d", (won[i] - lost[i]) * 50);
 			ImGui::Text("%d", (suml - lost[i]) * (nplayer == 3? 40: 30));
-			int result = s[0] + (won[i] - lost[i]) * 50 + (suml - lost[i]) * (nplayer == 3? 40: 30);
-			if (ImGui::Button((to_string(result) + "##2").c_str(), {ImGui::GetContentRegionAvail().x, 0}))
+			int res = s[0] + (won[i] - lost[i]) * 50 + (suml - lost[i]) * (nplayer == 3? 40: 30);
+			if (ImGui::Button((to_string(res) + "##2").c_str(), {ImGui::GetContentRegionAvail().x, 0})) {
+				result = res;
 				list = true;
+			}
 			ImGui::Text("");
 			ImGui::PopStyleColor(2);
 			ImGui::PopID();
@@ -388,7 +403,7 @@ void Program::read_field() {
 		fields.select(0.f, -1, -1, i + 1);
 
 		for (int j = 0; j < in.size(); j++)
-			in[j] = pow(fields.data()[j] / 255.f, proc.faint_chars? 2.f: 1.f);
+			in[j] = pow(fields.data()[j] / 255.f, proc.faint_chars? 1.5f: 1.f);
 		out = clss.classify(in);
 
 		for (int j = 0; j < out.size(); j++)
@@ -538,7 +553,6 @@ void Program::process() {
 		}
 
 		vector<int> ls{0}, ds{0};
-
 		for (auto rit = rs.begin(); rit != rs.end(); rit++) {
 			auto f = [&](int x) {fields.select(fcol + x, *rit - 1); return fields.str();};
 
