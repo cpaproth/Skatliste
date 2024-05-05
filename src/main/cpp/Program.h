@@ -51,6 +51,8 @@ private:
 	Fields fields;
 	Classifier clss;
 	static const std::vector<const char*> chars;
+	std::string settingsfile;
+	std::string playersfile;
 	std::vector<Player> players;
 	std::vector<Game> games;
 
@@ -60,7 +62,9 @@ private:
 	List toplist;
 	std::array<std::vector<int>, 4> topscores;
 
-	void show_list();
+	void load_players();
+	void save_players();
+	void show_players();
 	void show_results();
 	bool check_lines();
 	void read_field();

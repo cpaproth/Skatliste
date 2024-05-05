@@ -3,6 +3,7 @@
 #include "Program.h"
 #include "imgui.h"
 #include <map>
+#include <fstream>
 #include <iostream>
 
 using namespace std;
@@ -21,9 +22,15 @@ Program::Program() : cam(480, 640, 0), clss(Fields::wd, Fields::hd, chars.size()
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
+	settingsfile = ImGui::GetIO().IniFilename;
+	settingsfile = settingsfile.substr(0, settingsfile.rfind('/') + 1) + "settings.txt";
+	ifstream file(settingsfile.c_str());
+	file >> (playersfile = "players.csv");
+	load_players();
 	players.push_back({"Hans Franz", true, 100, {200, 300}});
 	players.push_back({"Klaus Glück", true, 100, {200, 300}});
 	players.push_back({"Sabine Gutherz", true, 100, {200, 300}});
+	cout << "players: " << players.size() << endl;
 
 	for (int n = 9; n <= 12; n++) {
 		for (int g = 2; g <= 18; g++) {
@@ -50,6 +57,17 @@ Program::~Program() {
 		worker.join();
 	for (auto tex : {&cap_tex, &dig_tex})
 		glDeleteTextures(1, tex);
+	ofstream file(settingsfile.c_str());
+	file << playersfile;
+}
+
+void Program::load_players() {
+
+}
+
+void Program::save_players() {
+
+
 }
 
 void Program::draw() {
@@ -60,7 +78,7 @@ void Program::draw() {
 
 	ImGui::Begin(convert || list? "Skat List##1": "Skat List##2", list? &list: learn? &learn: convert? &convert: 0);
 	if (list) {
-		show_list();
+		show_players();
 	} else if (convert) {
 		show_results();
 	} else if (!learn) {
@@ -181,21 +199,43 @@ void Program::draw() {
 	this_thread::sleep_for(chrono::milliseconds(30));
 }
 
-void Program::show_list() {
-	auto sortname = [](const Player& a, const Player& b) {return a.plays && !b.plays || a.plays == b.plays && a.name < b.name;};
+void Program::show_players() {
+	static char csv[30] = "";
+	static char name[20] = "";
+	static char date[11] = "";
+	static bool show = true;
+	static int mode = 0;
+	auto sortname = [](const Player& a, const Player& b) {mode = 0; return a.plays && !b.plays || a.plays == b.plays && a.name < b.name;};
+	auto sortscore = [](const Player& a, const Player& b) {mode = 1; return a.plays && !b.plays || a.plays == b.plays && a.score > b.score;};
+
+	ImGui::PushItemWidth(ImGui::CalcTextSize("longfilename.csv  ").x);
+	csv[playersfile.copy(csv, sizeof(csv) - 1)] = 0;
+	ImGui::InputText("", csv, sizeof(csv));
+	playersfile = csv;
+	ImGui::PopItemWidth();
+	ImGui::SameLine();
+	if (ImGui::Button("Load"))
+		load_players();
+	ImGui::SameLine();
+	if (ImGui::Button("Save"))
+		save_players();
+
 
 	if (ImGui::BeginTable("##1", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) {
 		ImGui::TableSetupScrollFreeze(1, 1);
-		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, show? 0.f: ImGui::CalcTextSize("99. Www").x);
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("-999   ---+++").x);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("00.00.0000  ").x);
 
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		ImGui::SetNextItemWidth(-1);
-		static char name[20] = "";
 		ImGui::InputText("##1", name, sizeof(name));
+		if (ImGui::ArrowButton("", show? ImGuiDir_Left: ImGuiDir_Right))
+			show = !show;
+		ImGui::SameLine();
 		auto it = find_if(players.begin(), players.end(), [](const Player& p) {return p.name == name;});
-		if (ImGui::Button(name[0] == 0? "Sort": it == players.end()? "Add": "Del")) {
+		if (ImGui::Button(name[0] == 0? "Sort##1": it == players.end()? "Add##1": "Del##1")) {
 			if (it == players.end() && name[0] != 0)
 				players.push_back({name, true});
 			else if (name[0] != 0)
@@ -204,9 +244,33 @@ void Program::show_list() {
 			name[0] = 0;
 		}
 
-		ImGui::SetNextItemWidth(-1);
 		ImGui::TableNextColumn();
+		ImGui::SetNextItemWidth(-1);
 		ImGui::InputInt("##2", &result);
+		if (ImGui::Button("Sort##2"))
+			sort(players.begin(), players.end(), sortscore);
+		it = find_if(players.begin(), players.end(), [](const Player& p) {return p.plays && p.score == 0;});
+		if (it == players.end()) {
+			ImGui::SameLine();
+			if (ImGui::Button("Add##2"))
+				for_each(players.begin(), players.end(), [](Player& p) {p.score = 0;});
+		}
+
+		ImGui::TableNextColumn();
+		ImGui::SetNextItemWidth(-1);
+		ImGui::InputText("##3", date, sizeof(date));
+		if (ImGui::Button(date[0] == 0? "Sort##3": date[0] == 'X'? "Del##3": "Add##3")) {
+			if (date[0] == 0) {
+				sort(players.begin(), players.end(), sortscore);
+			} else if (date[0] == 'X') {
+				for_each(players.begin(), players.end(), [](Player& p) {p = {p.name, false, 0, {}};});
+				sort(players.begin(), players.end(), sortname);
+			} else {
+				for_each(players.begin(), players.end(), [](Player& p) {p = {p.name, false, 0, {}};});
+				sort(players.begin(), players.end(), sortname);
+			}
+			date[0] = 0;
+		}
 
 
 		for (int r = 0; r < players.size(); r++) {
@@ -217,11 +281,15 @@ void Program::show_list() {
 				sort(players.begin(), players.end(), sortname);
 
 			ImGui::TableNextColumn();
-			if (players[r].plays && ImGui::Button(to_string(players[r].score).c_str())) {
+			if (players[r].plays && ImGui::Button(to_string(players[r].score).c_str()) && (players[r].score == 0 || result == 0)) {
 				players[r].score = result;
 				list = !convert;
-			} else if (!players[r].plays) {
+			} else if (!players[r].plays && players[r].score != 0) {
 				ImGui::Text("%d", players[r].score);
+			}
+			if (players[r].plays && mode == 1) {
+				ImGui::SameLine();
+				ImGui::Text("%s%d/%d", string(max(0, 4 - (int)to_string(players[r].score).length()), ' ').c_str(), 4, 3);
 			}
 
 			for (int c = 0; c < 3; c++) {
