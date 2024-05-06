@@ -7,7 +7,7 @@
 
 class Program {
 public:
-	Program();
+	Program(const std::string&);
 	~Program();
 
 	void draw();
@@ -44,14 +44,14 @@ private:
 
 	GLuint cap_tex = 0;
 	GLuint dig_tex = 0;
+	std::string path;
 	NdkCam cam;
 	ListProc proc;
 	ListProc::Lines lines;
 	Fields fields;
 	Classifier clss;
 	static const std::vector<const char*> chars;
-	std::string settingsfile;
-	std::string playersfile;
+	std::string playersfile = "players.csv";
 	std::vector<Player> players;
 	std::vector<Game> games;
 

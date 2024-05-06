@@ -218,8 +218,8 @@ NeuralNet::Values NeuralNet::Convolutional::backprop(const Values& delta, const 
 	return out;
 }
 
-Classifier::Classifier(int width, int height, int num) : w(width), h(height), n(num), nn(w * h, 0.f) {
-	ifstream file("/storage/emulated/0/Download/chars.181.ubyte", ifstream::binary);
+Classifier::Classifier(const string& p, int width, int height, int num) : path(p), w(width), h(height), n(num), nn(w * h, 0.f) {
+	ifstream file(path + "/chars.181.ubyte", ifstream::binary);
 	char mem[w * h + 1];
 	while (file.read(mem, w * h + 1)) {
 		labels.push_back(mem[0]);
@@ -235,11 +235,11 @@ Classifier::Classifier(int width, int height, int num) : w(width), h(height), n(
 	nn.addSigmoid();
 	nn.addLinear(n);
 	nn.addSigmoid();
-	nn.load("/storage/emulated/0/Download/nn.1.flt");
+	nn.load(path + "/nn.1.flt");
 }
 
 void Classifier::learn(uint8_t* chr, uint8_t l) {
-	ofstream file("/storage/emulated/0/Download/chars.181.ubyte", ofstream::binary | ofstream::app);
+	ofstream file(path + "/chars.181.ubyte", ofstream::binary | ofstream::app);
 	if (file) {
 		file.write((char*)&l, 1);
 		file.write((char*)chr, w * h);

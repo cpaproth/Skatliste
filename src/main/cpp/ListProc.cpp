@@ -276,7 +276,7 @@ void ListProc::scan(const vector<uint8_t>& l, int32_t width, int32_t height) {
 	input = l;
 	input.resize(w * h);
 
-	ifstream file("/storage/emulated/0/Download/img.480.ubyte");
+	ifstream file("/storage/emulated/0/Download/test.480.ubyte", ifstream::binary);
 	//file.read((char*)input.data(), input.size());
 
 	worker = thread(&ListProc::process, this);
@@ -291,16 +291,6 @@ bool ListProc::result(Lines& l, Fields& f) {
 
 	swap(lines, l);
 	swap(fields, f);
-
-//	ofstream file("/storage/emulated/0/Download/img.480.ubyte");
-//	file.write((char*)input.data(), input.size());
-//	ofstream ofile("/storage/emulated/0/Download/img.txt");
-//	ofile << "huch\n";
-//	ofile.close();
-//	ifstream ifile("/storage/emulated/0/Download/img.txt");
-//	string str;
-//	ifile >> str;
-//	cout << str << endl;
 
 	return l.size() > 20 && l.size() == lines.size();
 }
@@ -395,9 +385,6 @@ void ListProc::process() {
 	vector<int> vlines(w * angs, 0), hlines(h * angs, 0), corners(input.size(), 0);
 	ve2 o(w / 2, h / 2);
 
-	//timespec res1 = {}, res2 = {};
-	//clock_gettime(CLOCK_MONOTONIC, &res1);
-
 	for (int x = 1; x < w - 1; x++) {
 		for (int y = 1; y < h - 1; y++) {
 			int v = input[y * w + x];
@@ -421,9 +408,6 @@ void ListProc::process() {
 			}
 		}
 	}
-
-	//clock_gettime(CLOCK_MONOTONIC, &res2);
-	//cout << (res2.tv_sec - res1.tv_sec) * 1000. + (res2.tv_nsec - res1.tv_nsec) * 1.e-6 << endl;
 
 	auto vl = filter(vlines);
 	auto hl = filter(hlines);

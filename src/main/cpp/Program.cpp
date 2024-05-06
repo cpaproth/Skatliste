@@ -10,7 +10,7 @@ using namespace std;
 
 const vector<const char*> Program::chars{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-"};
 
-Program::Program() : cam(480, 640, 0), clss(Fields::wd, Fields::hd, chars.size()), converting(false) {
+Program::Program(const string& p) : path(p), cam(480, 640, 0), clss(p, Fields::wd, Fields::hd, chars.size()), converting(false) {
 	glEnable(GL_TEXTURE_2D);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	for (auto tex : {&cap_tex, &dig_tex}) {
@@ -22,10 +22,8 @@ Program::Program() : cam(480, 640, 0), clss(Fields::wd, Fields::hd, chars.size()
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
-	settingsfile = ImGui::GetIO().IniFilename;
-	settingsfile = settingsfile.substr(0, settingsfile.rfind('/') + 1) + "settings.txt";
-	ifstream file(settingsfile);
-	file >> (playersfile = "players.csv");
+	ifstream file(path + "/settings.txt");
+	file >> playersfile;
 	load_players();
 	players.push_back({"Hans Franz", true, 100, {200, 300}});
 	players.push_back({"Klaus Glück", true, 100, {200, 300}});
@@ -57,8 +55,9 @@ Program::~Program() {
 		worker.join();
 	for (auto tex : {&cap_tex, &dig_tex})
 		glDeleteTextures(1, tex);
-	ofstream file(settingsfile);
+	ofstream file(path + "/settings.txt");
 	file << playersfile;
+	save_players();
 }
 
 void Program::load_players() {
@@ -66,7 +65,6 @@ void Program::load_players() {
 }
 
 void Program::save_players() {
-
 
 }
 

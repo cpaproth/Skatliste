@@ -35,7 +35,7 @@ void HandleMotion(int, int, int) {}
 void HandleDestroy() {}
 void HandleResume() {
 	if (!program && ImGui::GetCurrentContext())
-		program = new Program();
+		program = new Program(gapp->activity->externalDataPath);
 }
 void HandleSuspend() {
 	delete program;
@@ -52,7 +52,7 @@ int main(int, char**) {
 	for (const char* name = AAssetDir_getNextFileName(dir); name != 0; name = AAssetDir_getNextFileName(dir)) {
 		AAsset* asset = AAssetManager_open(gapp->activity->assetManager, name, AASSET_MODE_STREAMING);
 		char mem[BUFSIZ];
-		ofstream file(gapp->activity->externalDataPath + string("/") + name);
+		ofstream file(gapp->activity->externalDataPath + string("/") + name, ofstream::binary);
 		for (int n = AAsset_read(asset, mem, BUFSIZ); n > 0; n = AAsset_read(asset, mem, BUFSIZ))
 			file.write(mem, n);
 		AAsset_close(asset);
