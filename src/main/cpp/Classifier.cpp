@@ -33,13 +33,13 @@ void NeuralNet::backprop(Values in, const Values& out) {
 }
 
 void NeuralNet::load(const string& filename) {
-	ifstream file(filename.c_str(), ifstream::binary);
+	ifstream file(filename, ifstream::binary);
 	for (int i = 0; i < layers.size() && file; i++)
 		file.read((char*)layers[i]->W.data(), layers[i]->W.size() * sizeof(float));
 }
 
 void NeuralNet::save(const string& filename) {
-	ofstream file(filename.c_str(), ofstream::binary);
+	ofstream file(filename, ofstream::binary);
 	for (int i = 0; i < layers.size() && file; i++)
 		file.write((char*)layers[i]->W.data(), layers[i]->W.size() * sizeof(float));
 }

@@ -24,7 +24,7 @@ Program::Program() : cam(480, 640, 0), clss(Fields::wd, Fields::hd, chars.size()
 
 	settingsfile = ImGui::GetIO().IniFilename;
 	settingsfile = settingsfile.substr(0, settingsfile.rfind('/') + 1) + "settings.txt";
-	ifstream file(settingsfile.c_str());
+	ifstream file(settingsfile);
 	file >> (playersfile = "players.csv");
 	load_players();
 	players.push_back({"Hans Franz", true, 100, {200, 300}});
@@ -57,7 +57,7 @@ Program::~Program() {
 		worker.join();
 	for (auto tex : {&cap_tex, &dig_tex})
 		glDeleteTextures(1, tex);
-	ofstream file(settingsfile.c_str());
+	ofstream file(settingsfile);
 	file << playersfile;
 }
 
@@ -210,7 +210,7 @@ void Program::show_players() {
 
 	ImGui::PushItemWidth(ImGui::CalcTextSize("longfilename.csv  ").x);
 	csv[playersfile.copy(csv, sizeof(csv) - 1)] = 0;
-	ImGui::InputText("", csv, sizeof(csv));
+	ImGui::InputText("##0", csv, sizeof(csv));
 	playersfile = csv;
 	ImGui::PopItemWidth();
 	ImGui::SameLine();

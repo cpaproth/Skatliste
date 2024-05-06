@@ -3,9 +3,9 @@
 #define CNFG_IMPLEMENTATION
 #include "CNFG.h"
 #include "Program.h"
-
 #include <string>
 #include <iostream>
+#include <fstream>
 
 using namespace std;
 
@@ -48,6 +48,17 @@ int main(int, char**) {
 	if (!AndroidHasPermissions("CAMERA"))
 		AndroidRequestAppPermissions("CAMERA");
 
+	AAssetDir* dir = AAssetManager_openDir(gapp->activity->assetManager, "");
+	for (const char* name = AAssetDir_getNextFileName(dir); name != 0; name = AAssetDir_getNextFileName(dir)) {
+		AAsset* asset = AAssetManager_open(gapp->activity->assetManager, name, AASSET_MODE_STREAMING);
+		char mem[BUFSIZ];
+		ofstream file(gapp->activity->externalDataPath + string("/") + name);
+		for (int n = AAsset_read(asset, mem, BUFSIZ); n > 0; n = AAsset_read(asset, mem, BUFSIZ))
+			file.write(mem, n);
+		AAsset_close(asset);
+	}
+	AAssetDir_close(dir);
+
 	CNFGSetupFullscreen("", 0);
 	HandleResume();
 
@@ -58,13 +69,11 @@ int main(int, char**) {
 		if (program)
 			program->draw();
 
-		static char text[50] = "öäüß";
-		static bool showDemo = false;
-		ImGui::InputText("Test", text, sizeof(text));
-		ImGui::Checkbox("Demo", &showDemo);
+		static bool demo = false;
+		ImGui::Checkbox("Demo", &demo);
 		ImGui::TextUnformatted(buf.c_str());
-		if (showDemo)
-			ImGui::ShowDemoWindow(&showDemo);
+		if (demo)
+			ImGui::ShowDemoWindow(&demo);
 
 		CNFGSwapBuffers();
 	}

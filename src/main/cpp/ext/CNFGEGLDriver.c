@@ -365,7 +365,7 @@ int CNFGSetup( const char * WindowName, int w, int h )
 	ImGui_ImplAndroid_Init(native_window);
 	ImGui_ImplOpenGL3_Init("#version 300 es");
 	static char inifile[128];
-	strcat(strcpy(inifile, gapp->activity->internalDataPath), "/imgui.ini");
+	strcat(strcpy(inifile, gapp->activity->externalDataPath), "/imgui.ini");
 	ImGui::GetIO().IniFilename = inifile;
 	ImFontConfig font_cfg;
 	font_cfg.SizePixels = 30.f;
