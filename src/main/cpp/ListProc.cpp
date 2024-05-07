@@ -276,8 +276,8 @@ void ListProc::scan(const vector<uint8_t>& l, int32_t width, int32_t height) {
 	input = l;
 	input.resize(w * h);
 
-	ifstream file("/storage/emulated/0/Download/test.480.ubyte", ifstream::binary);
-	//file.read((char*)input.data(), input.size());
+	ifstream file(test_img, ifstream::binary);
+	file.read((char*)input.data(), input.size());
 
 	worker = thread(&ListProc::process, this);
 }

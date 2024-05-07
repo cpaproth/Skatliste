@@ -194,6 +194,10 @@ void Program::draw() {
 		learn = learn? fields.next(): learn;
 	}
 
+	bool test = !proc.test_img.empty();
+	if (ImGui::Checkbox("Test Image", &test))
+		proc.test_img = test? path + "/test.480.ubyte": "";
+
 	this_thread::sleep_for(chrono::milliseconds(30));
 }
 
@@ -206,7 +210,7 @@ void Program::show_players() {
 	auto sortname = [](const Player& a, const Player& b) {mode = 0; return a.plays && !b.plays || a.plays == b.plays && a.name < b.name;};
 	auto sortscore = [](const Player& a, const Player& b) {mode = 1; return a.plays && !b.plays || a.plays == b.plays && a.score > b.score;};
 
-	ImGui::PushItemWidth(ImGui::CalcTextSize("longfilename.csv  ").x);
+	ImGui::PushItemWidth(ImGui::CalcTextSize("longfilename.csv").x);
 	csv[playersfile.copy(csv, sizeof(csv) - 1)] = 0;
 	ImGui::InputText("##0", csv, sizeof(csv));
 	playersfile = csv;
@@ -217,7 +221,9 @@ void Program::show_players() {
 	ImGui::SameLine();
 	if (ImGui::Button("Save"))
 		save_players();
-
+	ImGui::SameLine();
+	if (ImGui::Button("Download"))
+		save_players();
 
 	if (ImGui::BeginTable("##1", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) {
 		ImGui::TableSetupScrollFreeze(1, 1);

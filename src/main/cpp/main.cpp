@@ -70,7 +70,7 @@ int main(int, char**) {
 			program->draw();
 
 		static bool demo = false;
-		ImGui::Checkbox("Demo", &demo);
+		ImGui::Checkbox("GUI Demo", &demo);
 		ImGui::TextUnformatted(buf.c_str());
 		if (demo)
 			ImGui::ShowDemoWindow(&demo);

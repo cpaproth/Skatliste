@@ -5,6 +5,52 @@
 #include "ListProc.h"
 #include "Classifier.h"
 
+class Players {
+public:
+	bool three;
+	float prize;
+	int remove;
+
+	void load(const std::string&);
+	void save(const std::string&);
+	int count();
+	int rounds();
+	int find(const std::string&);
+	void add_name(const std::string&);
+	void del(int);
+	void clear();
+	void add_score();
+	void add_round(const std::string&);
+	const std::string& name(int);
+	bool& plays(int);
+	int& score(int);
+	int sum(int);
+	int total(int);
+	int removed(int);
+	int score(int, int);
+	void sort_name();
+	void sort_score();
+	void sort_sum();
+	void sort_total();
+	int sorted();
+	int table(int);
+	int seat(int);
+	int prize_day(int);
+	float prize_year(int);
+
+private:
+	struct Player {
+		std::string name;
+		bool plays;
+		int score;
+		int sum;
+		std::vector<int> scores;
+	};
+	std::vector<std::string> dates;
+	std::vector<Player> players;
+	int order;
+};
+
 class Program {
 public:
 	Program(const std::string&);

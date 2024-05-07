@@ -72,6 +72,7 @@ class ListProc {
 public:
 	using Lines = std::vector<mat2>;
 
+	std::string test_img;
 	int edge_th = 10;
 	int line_th = 40;
 	bool big_chars = false;
