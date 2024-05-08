@@ -13,26 +13,27 @@ public:
 
 	void load(const std::string&);
 	void save(const std::string&);
-	int count();
-	int rounds();
-	int find(const std::string&);
-	void add_name(const std::string&);
-	void del(int);
-	void clear();
-	void add_score();
-	void add_round(const std::string&);
-	const std::string& name(int);
-	bool& plays(int);
-	int& score(int);
-	int sum(int);
-	int total(int);
+	int count() {return ps.size();}
+	int rounds() {return dates.size();}
+	bool find(const std::string& n) {return find_if(ps.begin(), ps.end(), [&](const Player& p) {return p.name == n;}) != ps.end();}
+	void add_name(const std::string& n) {ps.push_back({n, true, 0, 0, {}});}
+	void del(const std::string& n) {ps.erase(find_if(ps.begin(), ps.end(), [&](const Player& p) {return p.name == n;}));}
+	void add_score() {for_each(ps.begin(), ps.end(), [](Player& p) {p.sum = p.sum + p.score; p.score = 0;});}
+	void add_round(const std::string& d) {dates.push_back(d); for_each(ps.begin(), ps.end(), [](Player& p) {p.scores.push_back(p.sum + p.score); p.sum = p.score = 0; p.plays = false;});}
+	void clear() {for_each(ps.begin(), ps.end(), [](Player& p) {p = {p.name, false, 0, 0, {}};});}
+	const std::string& name(int i) {return ps[i].name;}
+	const std::string& date(int i) {return dates[i];}
+	bool& plays(int i) {return ps[i].plays;}
+	int& score(int i) {return ps[i].score;}
+	int sum(int i) {return ps[i].sum + ps[i].score;}
+	int total(int i) {int t = 0; for(int& s: ps[i].scores) t += s; return t + sum(i) - removed(i);}
 	int removed(int);
-	int score(int, int);
+	int score(int i, int d) {return ps[i].scores[d];}
 	void sort_name();
 	void sort_score();
 	void sort_sum();
 	void sort_total();
-	int sorted();
+	int sorted() {return order;}
 	int table(int);
 	int seat(int);
 	int prize_day(int);
@@ -47,7 +48,7 @@ private:
 		std::vector<int> scores;
 	};
 	std::vector<std::string> dates;
-	std::vector<Player> players;
+	std::vector<Player> ps;
 	int order;
 };
 
