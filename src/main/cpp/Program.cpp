@@ -247,6 +247,7 @@ void Program::show_players() {
 			sort(players.begin(), players.end(), sortname);
 			name[0] = 0;
 		}
+		ImGui::Text("");
 
 		ImGui::TableNextColumn();
 		ImGui::SetNextItemWidth(-1);
