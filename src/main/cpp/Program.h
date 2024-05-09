@@ -9,7 +9,7 @@ class Players {
 public:
 	bool three;
 	float prize;
-	size_t remove;
+	int remove;
 
 	void load(const std::string&) {}
 	void save(const std::string&) {}
@@ -22,7 +22,7 @@ public:
 	bool filled() {return num() && find_if(ps.begin(), ps.end(), [](const Player& p) {return p.plays && p.score == 0;}) == ps.end();}
 	void add_score() {for_each(ps.begin(), ps.end(), [](Player& p) {p.result = p.sum(); p.score = 0;});}
 	void add_sum(const std::string& d) {dates.push_back(d); for_each(ps.begin(), ps.end(), [](Player& p) {p.scores.push_back(p.sum()); p.result = p.score = 0; p.plays = false;});}
-	void clear() {for_each(ps.begin(), ps.end(), [](Player& p) {p = {p.name, false, 0, 0, {}};});}
+	void clear() {dates.clear(); for_each(ps.begin(), ps.end(), [](Player& p) {p = {p.name, false, 0, 0, {}};});}
 	const std::string& name(int i) {return ps[i].name;}
 	const std::string& date(int i) {return dates[i];}
 	bool& plays(int i) {return ps[i].plays;}
@@ -30,7 +30,7 @@ public:
 	int sum(int i) {return ps[i].sum();}
 	int total(int i) {int r = find_if(ps.begin(), ps.end(), [](const Player& p) {return p.sum() != 0;}) == ps.end(); return ps[i].best(remove + r, dates.size());}
 	int removed(int i) {int t = 0; for(int& s: ps[i].scores) t += s; return t + sum(i) - total(i);}
-	int score(int i, int d) {return ps[i].scores[d];}
+	int score(int i, int d) {return d < ps[i].scores.size()? ps[i].scores[d]: 0;}
 	void sort_name() {sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 0; return a.plays && !b.plays || a.plays == b.plays && a.name < b.name;});}
 	void sort_score() {sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 1; return a.plays && !b.plays || a.plays == b.plays && a.score > b.score;});}
 	void sort_sum() {sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 2; return a.plays && !b.plays || a.plays == b.plays && a.sum() > b.sum();});}
@@ -67,12 +67,6 @@ public:
 	void draw();
 
 private:
-	struct Player {
-		std::string name;
-		bool plays;
-		int score;
-		std::vector<int> scores;
-	};
 	struct Game {
 		std::string name;
 		std::string tips;
@@ -106,7 +100,7 @@ private:
 	Classifier clss;
 	static const std::vector<const char*> chars;
 	std::string playersfile = "players.csv";
-	std::vector<Player> players;
+	Players players;
 	std::vector<Game> games;
 
 	std::thread worker;
@@ -115,8 +109,6 @@ private:
 	List toplist;
 	std::array<std::vector<int>, 4> topscores;
 
-	void load_players();
-	void save_players();
 	void show_players();
 	void show_results();
 	bool check_lines();
