@@ -427,16 +427,19 @@ void Program::show_results() {
 				ImGui::TableNextColumn();
 				ImGui::SetNextItemWidth(-1);
 				ImGui::PushID(i);
-				if (l[r].scores[i] != l[r - 1].scores[i])
+				if (l[r].scores[i] != l[r - 1].scores[i] || l[r].points == 0 && l[r].player == i)
 					res += 2 * ImGui::InputInt("", &l[r].scores[i], 0);
 				else if (ImGui::Button("-", {ImGui::GetContentRegionAvail().x, 0}))
-					res += (l[r].player = i, 1);
+					res += (l[r].player = i, l[r].points != 0? 1: 2);
 				ImGui::PopID();
 			}
 
-			if (res == 1 && l[r].player >= 0) {
+			if (res == 1 && l[r].points == 0)
+				l[r].player = -1;
+			if (res == 1) {
 				l[r].scores = l[r - 1].scores;
-				l[r].scores[l[r].player] = l[r - 1].scores[l[r].player] + l[r].points;
+				if (l[r].player >= 0)
+					l[r].scores[l[r].player] = l[r - 1].scores[l[r].player] + l[r].points;
 			}
 			if (res > 0) {
 				l.resize(r + 1);
@@ -636,9 +639,12 @@ void Program::process() {
 		lock_guard<std::mutex> lg(mut);
 		toplist = lists[0];
 		topscores.fill({0});
-		for (int r = 1; r < toplist.size(); r++)
+		for (int r = 1; r < toplist.size(); r++) {
 			if (toplist[r].player >= 0)
 				topscores[toplist[r].player][0] += toplist[r].points;
+			for (int p = 0; p < nplayer && toplist[r].points == 0; p++)
+				topscores[p][0] += toplist[r].scores[p] - toplist[r - 1].scores[p];
+		}
 
 		if (lists.front().back().player == -2)
 			break;
