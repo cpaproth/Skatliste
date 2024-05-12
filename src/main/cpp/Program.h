@@ -9,11 +9,12 @@
 class Players {
 public:
 	bool three;
+	int bet;
 	float prize;
 	int remove;
 
-	void load(const std::string&) {}
-	void save(const std::string&) {}
+	void load(const std::string&);
+	void save(const std::string&);
 	int count() {return ps.size();}
 	int rounds() {return dates.size();}
 	int num() {return count_if(ps.begin(), ps.end(), [](const Player& p) {return p.plays;});}

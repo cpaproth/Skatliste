@@ -5,8 +5,68 @@
 #include <map>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 using namespace std;
+
+void Players::load(const string& filename) {
+	prize = 0.f;
+	remove = order = 0;
+	dates.clear();
+	ps.clear();
+
+	ifstream file(filename);
+	string line;
+	bool round = false;
+	while (getline(file, line)) {
+		vector<string> vals;
+		stringstream str(line);
+		while (getline(str >> ws, line, ';'))
+			vals.push_back(line);
+
+		if (ps.size() == 0 && vals.size() > 1 && (vals[1] == "Runde" || vals[1].substr(0, 6) == "Gesamt")) {
+			round = vals[1] == "Runde";
+			if (vals.size() > (round? 3: 1))
+				prize = atof(vals[round? 3: 1].substr(6).c_str());
+			if (vals.size() > (round? 4: 2))
+				remove = atoi(vals[round? 4: 2].substr(5).c_str());
+			for (int d = round? 5: 3; d < vals.size(); d++)
+				dates.push_back(vals[d]);
+			continue;
+		}
+
+		if (vals.size() > 0)
+			ps.push_back({vals[0], false, 0, 0, {}});
+		if (round && vals.size() > 1 && (ps.back().plays = !vals[1].empty()))
+			ps.back().score = atoi(vals[1].c_str());
+		if (round && vals.size() > 2)
+			ps.back().result = atoi(vals[2].c_str());
+		for (int s = round? 5: 3; s < vals.size(); s++)
+			ps.back().scores.push_back(atoi(vals[s].c_str()));
+	}
+}
+
+void Players::save(const string& filename) {
+	ofstream file(filename);
+
+	file << "Name";
+	if (!noround())
+		file << ";Runde;Summe";
+	file << ";Gesamt " << prize << ";Abzug " << remove;
+	for (auto& d: dates)
+		file << ";" << d;
+	file << "\n";
+
+	for (int p = 0; p < ps.size(); p++) {
+		file << name(p);
+		if (!noround())
+			file << ";" << (plays(p) || score(p)? to_string(score(p)): "") << ";" << (ps[p].result? to_string(ps[p].result): "");
+		file << ";" << (total(p)? to_string(total(p)): "") << ";" << (removed(p)? to_string(removed(p)): "");
+		for (auto& s: ps[p].scores)
+			file << ";" << s;
+		file << "\n";
+	}
+}
 
 const vector<const char*> Program::chars{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-"};
 
@@ -25,9 +85,6 @@ Program::Program(const string& p) : path(p), cam(480, 640, 0), clss(p, Fields::w
 	ifstream file(path + "/settings.txt");
 	file >> playersfile;
 	players.load(path + "/" + playersfile);
-	players.add_name("Hans Franz");
-	players.add_name("Klaus Glück");
-	players.add_name("Sabine Gutherz");
 	cout << "players: " << players.count() << endl;
 
 	for (int n = 9; n <= 12; n++) {
@@ -261,7 +318,7 @@ void Program::show_players() {
 				players.sort_name();
 			} else {
 				players.add_sum(date);
-				players.sort_name();
+				players.sort_total();
 			}
 			date[0] = 0;
 		}
