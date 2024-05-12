@@ -220,8 +220,8 @@ void Program::show_players() {
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, show? 0.f: ImGui::CalcTextSize("99. Www").x);
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("-999   ---+++").x);
 		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("00.00.0000  ").x);
-		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("99.99  ").x);
-		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("999  ").x);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("99999 999.99").x);
+		ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("99999  ").x);
 
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
@@ -268,7 +268,7 @@ void Program::show_players() {
 
 		ImGui::TableNextColumn();
 		ImGui::SetNextItemWidth(-1);
-		ImGui::InputFloat("##4", &money);
+		ImGui::InputFloat("##4", &money, 0.f, 0.f, "%.2f");
 		if (ImGui::Button(money == 0.f? "Sort##4": "Add##4")) {
 			if (money == 0.f)
 				players.sort_total();
@@ -276,11 +276,12 @@ void Program::show_players() {
 				players.prize += money;
 			money = 0.f;
 		}
-		ImGui::Text("%f", players.prize);
+		ImGui::Text("%.2f", players.prize);
 
 		ImGui::TableNextColumn();
 		ImGui::SetNextItemWidth(-1);
-		ImGui::DragInt("##5", &players.remove, 1.f, 0, players.rounds());
+		if (ImGui::SliderInt("##5", &players.remove, 0, players.rounds()))
+			players.sort_total();
 
 		for (int d = 0; d < players.rounds(); d++) {
 			ImGui::TableNextColumn();
@@ -309,7 +310,7 @@ void Program::show_players() {
 			ImGui::TableNextColumn();
 			if (players.sum(r) != 0)
 				ImGui::Text("%d", players.sum(r));
-			if (players.sorted() == 2 && players.prize_day(r) != 0) {
+			if (players.sum(r) != 0 && players.sorted() == 2 && players.prize_day(r) != 0) {
 				ImGui::SameLine();
 				ImGui::Text("%s%d", string(max(0, 4 - (int)to_string(players.sum(r)).length()), ' ').c_str(), players.prize_day(r));
 			}
@@ -317,9 +318,9 @@ void Program::show_players() {
 			ImGui::TableNextColumn();
 			if (players.total(r) != 0)
 				ImGui::Text("%d", players.total(r));
-			if (players.sorted() == 3 && players.prize_year(r) != 0) {
+			if (players.total(r) != 0 && players.sorted() == 3 && players.prize_year(r) != 0) {
 				ImGui::SameLine();
-				ImGui::Text("%s%f", string(max(0, 5 - (int)to_string(players.total(r)).length()), ' ').c_str(), players.prize_year(r));
+				ImGui::Text("%s%.2f", string(max(0, 5 - (int)to_string(players.total(r)).length()), ' ').c_str(), players.prize_year(r));
 			}
 
 			ImGui::TableNextColumn();
