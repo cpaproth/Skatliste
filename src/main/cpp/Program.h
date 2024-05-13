@@ -25,22 +25,23 @@ public:
 	bool filled() {return num() && find_if(ps.begin(), ps.end(), [](const Player& p) {return p.plays && p.score == 0;}) == ps.end();}
 	void add_score() {for_each(ps.begin(), ps.end(), [](Player& p) {p.result = p.sum(); p.score = 0;});}
 	void add_sum(const std::string& d) {dates.push_front(d); for_each(ps.begin(), ps.end(), [](Player& p) {p.scores.push_front(p.sum()); p.result = p.score = 0; p.plays = false;});}
-	void clear() {prize = 0.f; dates.clear(); for_each(ps.begin(), ps.end(), [](Player& p) {p = {p.name, false, 0, 0, {}};});}
+	void clear() {prize = 0.f; remove = order = 0; dates.clear(); for_each(ps.begin(), ps.end(), [](Player& p) {p = {p.name, false, 0, 0, {}};});}
 	const std::string& name(int i) {return ps[i].name;}
 	const std::string& date(int i) {return dates[i];}
 	bool& plays(int i) {return ps[i].plays;}
 	int& score(int i) {return ps[i].score;}
 	int sum(int i) {return ps[i].sum();}
-	int total(int i) {return ps[i].best(remove + noround(), dates.size());}
+	int total(int i) {return ps[i].best(remove + noround(), rounds());}
 	int removed(int i) {int t = 0; for(int& s: ps[i].scores) t += s; return t + sum(i) - total(i);}
 	int score(int i, int d) {return d < ps[i].scores.size()? ps[i].scores[d]: 0;}
 	void sort_name() {sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 0; return a.plays && !b.plays || a.plays == b.plays && a.name < b.name;});}
-	void sort_score() {sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 1; return a.plays && !b.plays || a.plays == b.plays && a.score > b.score;});}
-	void sort_sum() {sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 2; return a.plays && !b.plays || a.plays == b.plays && a.sum() > b.sum();});}
-	void sort_total() {int r = remove + noround(); sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 3; return a.best(r, dates.size()) > b.best(r, dates.size());});}
+	void sort_score() {stable_sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 1; return a.plays && !b.plays || a.plays == b.plays && a.score > b.score;});}
+	void sort_sum() {stable_sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 2; return a.plays && !b.plays || a.plays == b.plays && a.sum() > b.sum();});}
+	void sort_total() {int r = remove + noround(); stable_sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 3; return a.best(r, rounds()) > b.best(r, rounds());});}
 	int sorted() {return order;}
-	int table(int i) {int n = num(), t3 = n / 3 * 3 == n && three? n / 3: (4 - n % 4) % 4, t4 = (n - 3 * t3) / 4; return i < 4 * t4? i / 4 + 1: (i - 4 * t4) / 3 + 1;}
-	int seat(int i) {int n = num(), t3 = n / 3 * 3 == n && three? n / 3: (4 - n % 4) % 4, t4 = (n - 3 * t3) / 4; return i < 4 * t4? i % 4 + 1: (i - 4 * t4) % 3 + 1;}
+	std::pair<int, int> tables() {int n = num(), t3 = n / 3 * 3 == n && three? n / 3: (4 - n % 4) % 4, t4 = (n - 3 * t3) / 4; return {t4, t3};}
+	int table(int i) {int t4 = tables().first; return i < 4 * t4? i / 4 + 1: (i - 4 * t4) / 3 + 1 + t4;}
+	int seat(int i) {int t4 = tables().first; return i < 4 * t4? i % 4 + 1: (i - 4 * t4) % 3 + 1;}
 	int prize_day(int i) {return num() - i;}
 	float prize_year(int) {return prize;}
 
@@ -52,7 +53,7 @@ private:
 		int result;
 		std::deque<int> scores;
 		int sum() const {return result + score;}
-		int best(int r, int n) const {auto s = scores; s.resize(n); s.push_back(sum()); sort(s.begin(), s.end()); int b = 0; while (n >= std::max(0, r) && s[n] > 0) b += s[n--]; return b;}
+		int best(int r, int n) const {auto s = scores; s.resize(n); s.push_back(sum()); sort(s.begin(), s.end()); int b = 0; while (n >= r && n >= 0 && s[n] > 0) b += s[n--]; return b;}
 	};
 	std::deque<std::string> dates;
 	std::vector<Player> ps;
