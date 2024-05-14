@@ -71,7 +71,6 @@ int main(int, char**) {
 
 		static bool demo = false;
 		ImGui::Checkbox("GUI Demo", &demo);
-		ImGui::DragFloat("Scale", &ImGui::GetIO().FontGlobalScale, 0.01f, 0.5f, 2.f, "%.2f");
 		ImGui::TextUnformatted(buf.c_str());
 		if (demo)
 			ImGui::ShowDemoWindow(&demo);

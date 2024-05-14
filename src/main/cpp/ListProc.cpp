@@ -453,6 +453,8 @@ void ListProc::process() {
 			if (length(u4 - u1) + length(u3 - u2) == 0.f)
 				continue;
 			fields.select((length(u2 - u1) + length(u3 - u4)) / (length(u4 - u1) + length(u3 - u2)) * (big_chars? 0.8f: 1.f), x, y);
+			if (fields.W() <= 1 || fields.H() <= 1)
+				continue;
 
 			vec3 v1(0.f, 0.f, 1.f);
 			vec3 v2(fields.W() - 1.f, 0.f, 1.f);

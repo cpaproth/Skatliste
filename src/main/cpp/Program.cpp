@@ -51,7 +51,7 @@ void Players::save(const string& filename) {
 	if (!noround())
 		file << ";Runde;Summe";
 	file << ";Gesamt " << prize << ";Abzug " << remove;
-	for (auto& d: dates)
+	for (auto& d : dates)
 		file << ";" << d;
 	file << "\n";
 
@@ -60,7 +60,7 @@ void Players::save(const string& filename) {
 		if (!noround())
 			file << ";" << (plays(p) || score(p)? to_string(score(p)): "") << ";" << (ps[p].result? to_string(ps[p].result): "");
 		file << ";" << (total(p)? to_string(total(p)): "") << ";" << (removed(p)? to_string(removed(p)): "");
-		for (auto& s: ps[p].scores)
+		for (auto& s : ps[p].scores)
 			file << ";" << (s? to_string(s): "");
 		file << "\n";
 	}
@@ -80,9 +80,13 @@ Program::Program(const string& p) : path(p), cam(480, 640, 0), clss(p, Fields::w
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
+	cfg["csv"] = "players.csv";
+	cfg["scale"] = "1.0";
 	ifstream file(path + "/settings.txt");
-	file >> playersfile;
-	players.load(path + "/" + playersfile);
+	string key;
+	while (getline(file >> ws, key, '='))
+		getline(file >> ws, cfg[key]);
+	players.load(path + "/" + cfg["csv"]);
 	cout << "players: " << players.count() << endl;
 
 	for (int n = 9; n <= 12; n++) {
@@ -111,14 +115,21 @@ Program::~Program() {
 	for (auto tex : {&cap_tex, &dig_tex})
 		glDeleteTextures(1, tex);
 	ofstream file(path + "/settings.txt");
-	file << playersfile;
-	players.save(path + "/" + playersfile);
+	for (auto& c : cfg)
+		file << c.first << "=" << c.second << "\n";
+	players.save(path + "/" + cfg["csv"]);
 }
 
 void Program::draw() {
+	auto s = ImGui::GetMainViewport()->Size, p = ImGui::GetMainViewport()->Pos;
+	float w = float(cam.w()), h = float(cam.h()), f = s.x * h < s.y * w? s.x / w: s.y / h;
+
 	if (convert || list) {
-		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
-		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
+		ImGui::SetNextWindowPos(p);
+		ImGui::SetNextWindowSize(s);
+	} else {
+		ImGui::SetNextWindowPos({p.x, p.y + min(f * h, 0.9f * s.y)});
+		ImGui::SetNextWindowSize({s.x, s.y - min(f * h, 0.9f * s.y)});
 	}
 
 	ImGui::Begin(convert || list? "Skat List##1": "Skat List##2", list? &list: learn? &learn: convert? &convert: 0);
@@ -148,6 +159,10 @@ void Program::draw() {
 		ImGui::Checkbox("Big", &proc.big_chars);
 		ImGui::SameLine();
 		ImGui::Checkbox("Faint", &proc.faint_chars);
+		ImGui::SameLine();
+		bool test = !proc.test_img.empty();
+		if (ImGui::Checkbox("Test Image", &test))
+			proc.test_img = test? path + "/test.480.ubyte": "";
 		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
 		ImGui::SliderInt("Line", &proc.line_th, 1, 100);
 
@@ -160,6 +175,7 @@ void Program::draw() {
 			ImGui::InputInt("FieldY", &fields.Y);
 			ImGui::InputInt("FieldD", &fields.D);
 		}
+		show_config();
 	} else if (fields.select()) {
 		ImGui::BeginGroup();
 		int val = ImGui::Button("S0") + ImGui::Button("S1") * 2 + ImGui::Button("S2") * 3 - 1;
@@ -210,8 +226,6 @@ void Program::draw() {
 	else
 		proc.get_input(bind(glTexImage2D, GL_TEXTURE_2D, 0, GL_LUMINANCE, _2, _3, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, _1));
 
-	auto s = ImGui::GetMainViewport()->Size;
-	float w = float(cam.w()), h = float(cam.h()), f = s.x * h < s.y * w? s.x / w: s.y / h;
 	ImGui::GetBackgroundDrawList()->AddImage((void*)(intptr_t)cap_tex, {0.f, 0.f}, {f * w, f * h});
 
 	if (cam.cap())
@@ -241,11 +255,23 @@ void Program::draw() {
 		learn = learn? fields.next(): learn;
 	}
 
-	bool test = !proc.test_img.empty();
-	if (ImGui::Checkbox("Test Image", &test))
-		proc.test_img = test? path + "/test.480.ubyte": "";
-
 	this_thread::sleep_for(chrono::milliseconds(30));
+}
+
+void Program::show_config() {
+	ImGui::GetIO().FontGlobalScale = linalg::clamp(atof(cfg["scale"].c_str()), 0.5f, 2.f);
+	players.three = atoi(cfg["three"].c_str());
+
+	ImGui::SeparatorText("Config");
+	ImGui::DragFloat("Scale", &ImGui::GetIO().FontGlobalScale, 0.01f, 0.5f, 2.f, "%.2f");
+
+	ImGui::Checkbox("3-Tables only", &players.three);
+	ImGui::Text("Players: %d", players.num());
+	ImGui::Text("4-Tables: %d", players.tables().first);
+	ImGui::Text("3-Tables: %d", players.tables().second);
+
+	cfg["scale"] = to_string(ImGui::GetIO().FontGlobalScale);
+	cfg["three"] = to_string(players.three);
 }
 
 void Program::show_players() {
@@ -256,19 +282,19 @@ void Program::show_players() {
 	static bool show = true;
 
 	ImGui::PushItemWidth(ImGui::CalcTextSize("longfilename.csv").x);
-	csv[playersfile.copy(csv, sizeof(csv) - 1)] = 0;
+	csv[cfg["csv"].copy(csv, sizeof(csv) - 1)] = 0;
 	ImGui::InputText("##0", csv, sizeof(csv));
-	playersfile = csv;
+	cfg["csv"] = csv;
 	ImGui::PopItemWidth();
 	ImGui::SameLine();
 	if (ImGui::Button("Load"))
-		players.load(path + "/" + playersfile);
+		players.load(path + "/" + cfg["csv"]);
 	ImGui::SameLine();
 	if (ImGui::Button("Save"))
-		players.save(path + "/" + playersfile);
+		players.save(path + "/" + cfg["csv"]);
 	ImGui::SameLine();
 	if (ImGui::Button("Download"))
-		players.save("/storage/emulated/0/Download/" + playersfile);
+		players.save("/storage/emulated/0/Download/" + cfg["csv"]);
 
 	if (ImGui::BeginTable("##1", 5 + players.rounds(), ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) {
 		ImGui::TableSetupScrollFreeze(1, 1);
@@ -365,16 +391,18 @@ void Program::show_players() {
 			ImGui::TableNextColumn();
 			if (players.sum(r) != 0)
 				ImGui::Text("%4d", players.sum(r));
-			if (players.sum(r) != 0 && players.sorted() == 2 && players.prize_day(r) != 0) {
-				ImGui::SameLine();
-				ImGui::Text("%4d", players.prize_day(r));
+			if (players.sorted() == 2 && players.prize_day(r) != 0) {
+				if (players.sum(r) != 0)
+					ImGui::SameLine();
+				ImGui::Text("%6.2f", players.prize_day(r));
 			}
 
 			ImGui::TableNextColumn();
 			if (players.total(r) != 0)
 				ImGui::Text("%5d", players.total(r));
-			if (players.total(r) != 0 && players.sorted() == 3 && players.prize_year(r) != 0) {
-				ImGui::SameLine();
+			if (players.sorted() == 3 && players.prize_year(r) != 0) {
+				if (players.total(r) != 0)
+					ImGui::SameLine();
 				ImGui::Text("%6.2f", players.prize_year(r));
 			}
 

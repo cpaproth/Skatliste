@@ -5,6 +5,7 @@
 #include "ListProc.h"
 #include "Classifier.h"
 #include <deque>
+#include <map>
 
 class Players {
 public:
@@ -42,7 +43,7 @@ public:
 	std::pair<int, int> tables() {int n = num(), t3 = n / 3 * 3 == n && three? n / 3: (4 - n % 4) % 4, t4 = (n - 3 * t3) / 4; return {t4, t3};}
 	int table(int i) {int t4 = tables().first; return i < 4 * t4? i / 4 + 1: (i - 4 * t4) / 3 + 1 + t4;}
 	int seat(int i) {int t4 = tables().first; return i < 4 * t4? i % 4 + 1: (i - 4 * t4) % 3 + 1;}
-	int prize_day(int i) {return num() - i;}
+	float prize_day(int i) {return num() - i;}
 	float prize_year(int) {return prize;}
 
 private:
@@ -100,7 +101,7 @@ private:
 	Fields fields;
 	Classifier clss;
 	static const std::vector<const char*> chars;
-	std::string playersfile = "players.csv";
+	std::map<std::string, std::string> cfg;
 	Players players;
 	std::vector<Game> games;
 
@@ -110,6 +111,7 @@ private:
 	List toplist;
 	std::array<std::vector<int>, 4> topscores;
 
+	void show_config();
 	void show_players();
 	void show_results();
 	bool check_lines();
