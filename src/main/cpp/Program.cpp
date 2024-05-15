@@ -51,7 +51,7 @@ void Players::save(const string& filename) {
 	if (!noround())
 		file << ";Runde;Summe";
 	file << ";Gesamt " << prize << ";Abzug " << remove;
-	for (auto& d : dates)
+	for (const auto& d : dates)
 		file << ";" << d;
 	file << "\n";
 
@@ -60,18 +60,19 @@ void Players::save(const string& filename) {
 		if (!noround())
 			file << ";" << (plays(p) || score(p)? to_string(score(p)): "") << ";" << (ps[p].result? to_string(ps[p].result): "");
 		file << ";" << (total(p)? to_string(total(p)): "") << ";" << (removed(p)? to_string(removed(p)): "");
-		for (auto& s : ps[p].scores)
+		for (const auto& s : ps[p].scores)
 			file << ";" << (s? to_string(s): "");
 		file << "\n";
 	}
 }
 
 const vector<const char*> Program::chars{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-"};
+const map<string, string> Program::def_cfg{{"csv", "players.csv"}, {"three", "0"}, {"scale", "1.0"}, {"bet", "10.0"}};
 
 Program::Program(const string& p) : path(p), cam(480, 640, 0), clss(p, Fields::wd, Fields::hd, chars.size()), converting(false) {
 	glEnable(GL_TEXTURE_2D);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	for (auto tex : {&cap_tex, &dig_tex}) {
+	for (const auto& tex : {&cap_tex, &dig_tex}) {
 		glGenTextures(1, tex);
 		glBindTexture(GL_TEXTURE_2D, *tex);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -80,8 +81,6 @@ Program::Program(const string& p) : path(p), cam(480, 640, 0), clss(p, Fields::w
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
-	cfg["csv"] = "players.csv";
-	cfg["scale"] = "1.0";
 	ifstream file(path + "/settings.txt");
 	string key;
 	while (getline(file >> ws, key, '='))
@@ -112,11 +111,11 @@ Program::~Program() {
 	converting = false;
 	if (worker.joinable())
 		worker.join();
-	for (auto tex : {&cap_tex, &dig_tex})
+	for (const auto& tex : {&cap_tex, &dig_tex})
 		glDeleteTextures(1, tex);
 	ofstream file(path + "/settings.txt");
-	for (auto& c : cfg)
-		file << c.first << "=" << c.second << "\n";
+	for (const auto& c : def_cfg)
+		file << c.first << "=" << cfg[c.first] << "\n";
 	players.save(path + "/" + cfg["csv"]);
 }
 
@@ -237,7 +236,7 @@ void Program::draw() {
 	}
 
 	int pos = 0;
-	for (auto& l : lines)
+	for (const auto& l : lines)
 		ImGui::GetBackgroundDrawList()->AddLine({f * l.x.x, f * l.x.y}, {f * l.y.x, f * l.y.y}, fields.check(pos++)? 0xff00ff00: 0xff0000ff);
 
 	if (!ImGui::GetIO().WantCaptureMouse && ImGui::GetIO().MouseClicked[0] && ImGui::GetIO().MousePos.y / f < h && !convert) {
@@ -261,10 +260,12 @@ void Program::draw() {
 void Program::show_config() {
 	ImGui::GetIO().FontGlobalScale = linalg::clamp(atof(cfg["scale"].c_str()), 0.5f, 2.f);
 	players.three = atoi(cfg["three"].c_str());
+	players.bet = max(atof(cfg["bet"].c_str()), 1.);
 
 	ImGui::SeparatorText("Config");
 	ImGui::DragFloat("Scale", &ImGui::GetIO().FontGlobalScale, 0.01f, 0.5f, 2.f, "%.2f");
 
+	ImGui::InputFloat("EUR", &players.bet, 0.f, 0.f, "%.2f");
 	ImGui::Checkbox("3-Tables only", &players.three);
 	ImGui::Text("Players: %d", players.num());
 	ImGui::Text("4-Tables: %d", players.tables().first);
@@ -272,6 +273,7 @@ void Program::show_config() {
 
 	cfg["scale"] = to_string(ImGui::GetIO().FontGlobalScale);
 	cfg["three"] = to_string(players.three);
+	cfg["bet"] = to_string(players.bet);
 }
 
 void Program::show_players() {

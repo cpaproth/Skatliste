@@ -10,7 +10,7 @@
 class Players {
 public:
 	bool three;
-	int bet;
+	float bet;
 	float prize;
 	int remove;
 
@@ -101,7 +101,8 @@ private:
 	Fields fields;
 	Classifier clss;
 	static const std::vector<const char*> chars;
-	std::map<std::string, std::string> cfg;
+	static const std::map<std::string, std::string> def_cfg;
+	std::map<std::string, std::string> cfg = def_cfg;
 	Players players;
 	std::vector<Game> games;
 
