@@ -127,8 +127,8 @@ void Program::draw() {
 		ImGui::SetNextWindowPos(p);
 		ImGui::SetNextWindowSize(s);
 	} else {
-		ImGui::SetNextWindowPos({p.x, p.y + min(f * h, 0.9f * s.y)});
-		ImGui::SetNextWindowSize({s.x, s.y - min(f * h, 0.9f * s.y)});
+		ImGui::SetNextWindowPos({p.x, p.y + min(f * h, 0.7f * s.y)});
+		ImGui::SetNextWindowSize({s.x, s.y - min(f * h, 0.7f * s.y)});
 	}
 
 	ImGui::Begin(convert || list? "Skat List##1": "Skat List##2", list? &list: learn? &learn: convert? &convert: 0);
@@ -153,26 +153,6 @@ void Program::draw() {
 			ImGui::SameLine();
 			if (ImGui::Button("Rescan"))
 				proc.rescan();
-		}
-
-		ImGui::Checkbox("Big", &proc.big_chars);
-		ImGui::SameLine();
-		ImGui::Checkbox("Faint", &proc.faint_chars);
-		ImGui::SameLine();
-		bool test = !proc.test_img.empty();
-		if (ImGui::Checkbox("Test Image", &test))
-			proc.test_img = test? path + "/test.480.ubyte": "";
-		ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
-		ImGui::SliderInt("Line", &proc.line_th, 1, 100);
-
-		if (fields.select()) {
-			glBindTexture(GL_TEXTURE_2D, dig_tex);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields.W(), fields.H(), 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields.data());
-			ImGui::Image((void*)(intptr_t)dig_tex, {fields.W() * 4.f, fields.H() * 4.f});
-			ImGui::Text("%s", fields.str().c_str());
-			ImGui::InputInt("FieldX", &fields.X);
-			ImGui::InputInt("FieldY", &fields.Y);
-			ImGui::InputInt("FieldD", &fields.D);
 		}
 		show_config();
 	} else if (fields.select()) {
@@ -262,14 +242,43 @@ void Program::show_config() {
 	players.three = atoi(cfg["three"].c_str());
 	players.bet = max(atof(cfg["bet"].c_str()), 1.);
 
-	ImGui::SeparatorText("Config");
-	ImGui::DragFloat("Scale", &ImGui::GetIO().FontGlobalScale, 0.01f, 0.5f, 2.f, "%.2f");
+	static float width = ImGui::GetContentRegionAvail().x / 2.f;
+	ImGui::BeginChild("##1", {width, 0.f}, true);
+	ImGui::Checkbox("Big", &proc.big_chars);
+	ImGui::SameLine();
+	ImGui::Checkbox("Faint", &proc.faint_chars);
+	ImGui::SameLine();
+	bool test = !proc.test_img.empty();
+	if (ImGui::Checkbox("Test", &test))
+		proc.test_img = test? path + "/test.480.ubyte": "";
+	ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
+	ImGui::SliderInt("Line", &proc.line_th, 1, 100);
 
+	if (fields.select()) {
+		glBindTexture(GL_TEXTURE_2D, dig_tex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields.W(), fields.H(), 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields.data());
+		ImGui::Image((void*)(intptr_t)dig_tex, {fields.W() * 4.f, fields.H() * 4.f});
+		ImGui::Text("%s", fields.str().c_str());
+		ImGui::InputInt("FieldX", &fields.X);
+		ImGui::InputInt("FieldY", &fields.Y);
+		ImGui::InputInt("FieldD", &fields.D);
+	}
+	ImGui::EndChild();
+
+	ImGui::SameLine(0.f, 0.f);
+	ImGui::InvisibleButton("splitter", {20.f, ImGui::GetContentRegionAvail().y});
+	if (ImGui::IsItemActive())
+		width += ImGui::GetIO().MouseDelta.x;
+	ImGui::SameLine(0.f, 0.f);
+
+	ImGui::BeginChild("##2", {0.f, 0.f}, true);
+	ImGui::DragFloat("Scale", &ImGui::GetIO().FontGlobalScale, 0.01f, 0.5f, 2.f, "%.2f");
 	ImGui::InputFloat("EUR", &players.bet, 0.f, 0.f, "%.2f");
-	ImGui::Checkbox("3-Tables only", &players.three);
-	ImGui::Text("Players: %d", players.num());
+	ImGui::Checkbox("Only 3-Tables", &players.three);
+	ImGui::Text("Players: %d / %.2f EUR", players.num(), players.num() * players.bet);
 	ImGui::Text("4-Tables: %d", players.tables().first);
 	ImGui::Text("3-Tables: %d", players.tables().second);
+	ImGui::EndChild();
 
 	cfg["scale"] = to_string(ImGui::GetIO().FontGlobalScale);
 	cfg["three"] = to_string(players.three);
