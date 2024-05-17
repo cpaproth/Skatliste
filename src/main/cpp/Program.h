@@ -11,6 +11,8 @@ class Players {
 public:
 	bool three;
 	float bet;
+	int bpprize;
+	int prizes;
 	float prize;
 	int remove;
 
@@ -43,8 +45,13 @@ public:
 	std::pair<int, int> tables() {int n = num(), t3 = n / 3 * 3 == n && three? n / 3: (4 - n % 4) % 4, t4 = (n - 3 * t3) / 4; return {t4, t3};}
 	int table(int i) {int t4 = tables().first; return i < 4 * t4? i / 4 + 1: (i - 4 * t4) / 3 + 1 + t4;}
 	int seat(int i) {int t4 = tables().first; return i < 4 * t4? i % 4 + 1: (i - 4 * t4) % 3 + 1;}
-	float prize_day(int i) {return num() - i;}
-	float prize_year(int) {return prize;}
+	float prize_round(int i) {return num() - i;}
+	float prize_season(int i) {
+		float r = prize;
+		for (int p = i + 1; p < count(); p++)
+			r -= prize_season(p);
+		return i == 0? r: i < prizes? floor(r / (prizes - i / 2.f) / (i + 1.f) * (prizes - i) * 2.f) / 2.f: 0.f;
+	}
 
 private:
 	struct Player {
