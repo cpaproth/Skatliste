@@ -66,6 +66,21 @@ void Players::save(const string& filename) {
 	}
 }
 
+float Players::prize_round(int i) {
+	int n = num(), przs = (n - 1) / max(1, bpprize) + 1;
+	float s = 0.f, c = 0.f, prz = (n - przs - 1) * bet, r = floor(bet / 5.f) * 5.f == bet? 5.f: 1.f;
+	for (int p = min(przs, n) - 1; p >= i; p--)
+		s += c = floor((prz - s) / (przs - p / 2.f) / (p + 1.f) * (przs - p) / r) * r;
+	return i == 0? c + prz - s + 2.f * bet: i < przs? c + bet: 0.f;
+}
+
+float Players::prize_season(int i) {
+	float s = 0.f, c = 0.f;
+	for (int p = min(prizes, count()) - 1; p >= i; p--)
+		s += c = floor((prize - s) / (prizes - p / 2.f) / (p + 1.f) * (prizes - p) * 2.f) / 2.f;
+	return i == 0? c + prize - s: c;
+}
+
 const vector<const char*> Program::chars{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-"};
 const map<string, string> Program::def_cfg{{"csv", "players.csv"}, {"three", "0"}, {"scale", "1.0"}, {"bet", "10.0"}, {"prizes", "3"}, {"bpprize", "4"}};
 
