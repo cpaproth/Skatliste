@@ -438,7 +438,7 @@ int32_t handle_input(struct android_app* app, AInputEvent* event)
 		//Dear ImGui, handle unicode character
 		static bool compose = false;
 		if (unicode && AKeyEvent_getAction(event))
-			compose = (ImGui::GetIO().AddInputCharacter(unicode + (!compose? 0: (unicode | 0x20) == 0x61? 0x83: 0x87)), false);
+			compose = (ImGui::GetIO().AddInputCharacter(unicode + (!compose? 0: (unicode | 0x20) == 0x61? 0x83: (unicode | 0x20) == 0x65? 0x84: 0x87)), false);
 		compose |= !code;
 
 		if( unicode )
