@@ -114,7 +114,7 @@ private:
 	List toplist;
 	std::array<std::vector<int>, 4> topscores;
 
-	void show_config();
+	void show_config(float);
 	void show_players();
 	void show_results();
 	bool check_lines();

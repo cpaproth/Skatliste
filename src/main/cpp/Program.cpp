@@ -136,7 +136,7 @@ Program::~Program() {
 
 void Program::draw() {
 	auto s = ImGui::GetMainViewport()->Size, p = ImGui::GetMainViewport()->Pos;
-	float w = float(cam.w()), h = float(cam.h()), f = s.x * h < s.y * w? s.x / w: s.y / h;
+	float w = float(cam.w()), h = float(cam.h()), f = s.x * h < s.y * w? s.x / w: s.y / h, sc = ImGui::GetFontSize() / 30.f;
 
 	if (convert || list) {
 		ImGui::SetNextWindowPos(p);
@@ -169,7 +169,7 @@ void Program::draw() {
 			if (ImGui::Button("Rescan"))
 				proc.rescan();
 		}
-		show_config();
+		show_config(sc);
 	} else if (fields.select()) {
 		ImGui::BeginGroup();
 		int val = ImGui::Button("S0") + ImGui::Button("S1") * 2 + ImGui::Button("S2") * 3 - 1;
@@ -182,7 +182,7 @@ void Program::draw() {
 		ImGui::SameLine();
 		glBindTexture(GL_TEXTURE_2D, dig_tex);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields.W(), fields.H(), 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields.data());
-		ImGui::Image((void*)(intptr_t)dig_tex, {fields.W() * ImGui::GetFontSize() / 3.f, fields.H() * ImGui::GetFontSize() / 3.f});
+		ImGui::Image((void*)(intptr_t)dig_tex, {fields.W() * 10.f * sc, fields.H() * 10.f * sc});
 
 		ImGui::SameLine();
 		ImGui::BeginGroup();
@@ -201,7 +201,7 @@ void Program::draw() {
 		for (int i = 0; i < chars.size(); i++) {
 			if (i % 4 != 0)
 				ImGui::SameLine();
-			if (ImGui::Button(chars[i], {70, 70}))
+			if (ImGui::Button(chars[i], {70.f * sc, 70.f * sc}))
 				val = i;
 		}
 		if (val >= 0) {
@@ -252,7 +252,7 @@ void Program::draw() {
 	this_thread::sleep_for(chrono::milliseconds(30));
 }
 
-void Program::show_config() {
+void Program::show_config(float sc) {
 	ImGui::GetIO().FontGlobalScale = clamp(atof(cfg["scale"].c_str()), 0.5, 2.);
 	players.bet = max(atof(cfg["bet"].c_str()), 1.);
 	players.bpprize = max(atoi(cfg["bpprize"].c_str()), 2);
@@ -274,7 +274,7 @@ void Program::show_config() {
 	if (fields.select()) {
 		glBindTexture(GL_TEXTURE_2D, dig_tex);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, fields.W(), fields.H(), 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, fields.data());
-		ImGui::Image((void*)(intptr_t)dig_tex, {fields.W() * ImGui::GetFontSize() / 8.f, fields.H() * ImGui::GetFontSize() / 8.f});
+		ImGui::Image((void*)(intptr_t)dig_tex, {fields.W() * 4.f * sc, fields.H() * 4.f * sc});
 		ImGui::Text("%s", fields.str().c_str());
 		ImGui::InputInt("X", &fields.X);
 		ImGui::InputInt("Y", &fields.Y);
@@ -283,13 +283,15 @@ void Program::show_config() {
 	ImGui::EndChild();
 
 	ImGui::SameLine(0.f, 0.f);
-	ImGui::InvisibleButton("##2", {20.f, ImGui::GetContentRegionAvail().y});
+	ImGui::InvisibleButton("##2", {40.f * sc, ImGui::GetContentRegionAvail().y});
 	if (ImGui::IsItemActive())
-		width = clamp(width + ImGui::GetIO().MouseDelta.x, 1.f, ImGui::GetContentRegionAvail().x - 21.f);
+		width = clamp(width + ImGui::GetIO().MouseDelta.x, 1.f, ImGui::GetContentRegionAvail().x - 1.f - 40.f * sc);
 	ImGui::SameLine(0.f, 0.f);
 
 	ImGui::BeginChild("##3", {0.f, 0.f}, true);
 	ImGui::DragFloat("Scale", &ImGui::GetIO().FontGlobalScale, 0.01f, 0.5f, 2.f, "%.2f");
+	if (sc != ImGui::GetIO().FontGlobalScale)
+		(ImGui::GetStyle() = ImGuiStyle()).ScaleAllSizes(3.f * ImGui::GetIO().FontGlobalScale);
 	ImGui::InputFloat("EUR/Bet", &players.bet, 0.f, 0.f, "%.2f");
 	ImGui::InputInt("Bets/Prize", &players.bpprize);
 	ImGui::InputInt("Prizes/Season", &players.prizes);
