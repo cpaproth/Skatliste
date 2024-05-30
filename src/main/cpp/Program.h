@@ -42,7 +42,7 @@ public:
 	void sort_sum() {stable_sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 2; return a.plays && !b.plays || a.plays == b.plays && a.sum() > b.sum();});}
 	void sort_total() {int r = remove + noround(); stable_sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 3; return a.best(r, rounds()) > b.best(r, rounds());});}
 	int sorted() {return order;}
-	std::pair<int, int> tables() {int n = num(), t3 = n / 3 * 3 == n && three? n / 3: (4 - n % 4) % 4, t4 = (n - 3 * t3) / 4; return {t4, t3};}
+	std::pair<int, int> tables() {int n = num(), t3 = three? (n - n % 3 * 4) / 3: (4 - n % 4) % 4, t4 = (n - 3 * t3) / 4; return {t4, t3};}
 	int table(int i) {int t4 = tables().first; return i < 4 * t4? i / 4 + 1: (i - 4 * t4) / 3 + 1 + t4;}
 	int seat(int i) {int t4 = tables().first; return i < 4 * t4? i % 4 + 1: (i - 4 * t4) % 3 + 1;}
 	float prize_round(int);

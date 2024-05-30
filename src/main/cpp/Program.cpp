@@ -68,10 +68,10 @@ void Players::save(const string& filename) {
 
 float Players::prize_round(int i) {
 	int n = num(), przs = (n - 1) / max(1, bpprize) + 1;
-	float s = 0.f, c = 0.f, prz = (n - przs - 1) * bet, r = floor(bet / 5.f) * 5.f == bet? 5.f: 1.f;
+	float s = 0.f, c = 0.f, prz = n * bet;
 	for (int p = min(przs, n) - 1; p >= i; p--)
-		s += c = floor((prz - s) / (przs - p / 2.f) / (p + 1.f) * (przs - p) / r) * r;
-	return i == 0? c + prz - s + 2.f * bet: i < przs? c + bet: 0.f;
+		s += c = max(bet, floor((prz - s) / (przs - p / 2.f) / (p + 1.f) * (przs - p) / bet * 2.f) * bet / 2.f);
+	return i == 0? c + prz - s: i < przs? c: 0.f;
 }
 
 float Players::prize_season(int i) {
@@ -295,7 +295,7 @@ void Program::show_config(float sc) {
 	ImGui::InputFloat("EUR/Bet", &players.bet, 0.f, 0.f, "%.2f");
 	ImGui::InputInt("Bets/Prize", &players.bpprize);
 	ImGui::InputInt("Prizes/Season", &players.prizes);
-	ImGui::Checkbox("Only 3-Tables", &players.three);
+	ImGui::Checkbox("Prefer 3-Tables", &players.three);
 	ImGui::Text("Players: %d / %.2f EUR", players.num(), players.num() * players.bet);
 	ImGui::Text("4-Tables: %d", players.tables().first);
 	ImGui::Text("3-Tables: %d", players.tables().second);
