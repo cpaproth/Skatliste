@@ -68,10 +68,13 @@ void Players::save(const string& filename) {
 
 float Players::prize_round(int i) {
 	int n = num(), przs = (n - 1) / max(1, bpprize) + 1;
-	float s = 0.f, c = 0.f, prz = n * bet;
-	for (int p = min(przs, n) - 1; p >= i; p--)
-		s += c = max(bet, floor((prz - s) / (przs - p / 2.f) / (p + 1.f) * (przs - p) / bet * 2.f) * bet / 2.f);
-	return i == 0? c + prz - s: i < przs? c: 0.f;
+	float e = 0.5f, m = 0.5f, o = 0.5f, eps = 1.f + FLT_EPSILON;
+	auto f = [&](int p, int t, float (*r)(float)) {float s = 0.f; while (p <= t) s += r(0.5f + o + (m * n - 1.f) * pow((float)p++ / przs, 1.f / e)); return s;};
+	for (float mi = 0.f, ma = 1.f, s; (s = f(1, przs, fabs)) != n && ma / mi > eps; m = (mi + ma) / 2.f)
+		(s > n? ma: mi) = m;
+	for (float mi = 0.f, ma = 1.f, s; (s = f(1, przs, round)) != n && ma / mi > eps; o = (mi + ma) / 2.f)
+		(s > n? ma: mi) = o;
+	return i < przs? f(przs - i, przs - i, round) * bet: 0.f;
 }
 
 float Players::prize_season(int i) {
