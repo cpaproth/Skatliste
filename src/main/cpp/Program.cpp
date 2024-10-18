@@ -623,7 +623,7 @@ bool Program::check_lines() {
 
 void Program::read_field() {
 	fields.str().clear();
-	int n = fields.separate(3), o = Fields::wd / 2;
+	int n = fields.separate(3), o = Fields::wd / 2 * 5;
 	NeuralNet::Values mem(n * chars.size(), 0.f), in(Fields::wd * Fields::hd), out;
 
 	for (int i = 0; i < n; i++) {
@@ -643,7 +643,7 @@ void Program::read_field() {
 		for (int i = 0; i < n; i++) {
 			float ma = *max_element(&mem[j * n + max(0, i - o)], &mem[j * n + min(n, i + o + 1)]);
 			if (ma == mem[j * n + i]) {
-				best.insert({ma, i * 16 + j});
+				best.insert({ma, i / 5 * 16 + j});
 				i += o;
 			}
 		}
