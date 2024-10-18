@@ -22,7 +22,7 @@ bool Fields::select(float s, int x, int y, int d) {
 		return false;
 	D = clamp(d < 0? D: d, 0, (int)fields[cur].chars.size());
 	if (s > 0.f)
-		fields[cur].all.resize((hd + 4) * ceil(s * hd));
+		fields[cur].all.resize(hd * ceil(s * hd));
 	return true;
 }
 
@@ -92,7 +92,7 @@ int Fields::separate(int mode) {
 				operator()(x, y) = (operator()(x, y) - mi) * 255 / max(1, ma - mi);
 			}
 		}
-		if (cma - cmi < 64 && mode < 3)
+		if (cma - cmi < 64)
 			fields[cur].chars.erase(fields[cur].chars.begin() + D - 1);
 	}
 	return fields[cur].chars.size();
@@ -100,15 +100,13 @@ int Fields::separate(int mode) {
 
 void Fields::sep_mode0(int w, int h, uint8_t* field, int s) {
 	for (int i = 0; i + wd <= w; i += s) {
-		for (int o = 0; o <= 2; o = o > 0? -o: s - o) {
-			D = fields[cur].chars.size() + 1;
-			fields[cur].chars.emplace_back(wd * h);
-			for (int y = 0; y < h; y++) {
-				for (int x = 0; x < wd; x++) {
-					float val = field[(y + o) * w + x + i] / 255.f;
-					float weight = x < 3? 0.5f + x / 6.f: x + 3 >= wd? 0.5f + (wd - 1.f - x) / 6.f: 1.f;
-					operator()(x, y) = clamp(weight * val + 1.f - weight, 0.f, 1.f) * 255.f;
-				}
+		D = fields[cur].chars.size() + 1;
+		fields[cur].chars.emplace_back(wd * h);
+		for (int y = 0; y < h; y++) {
+			for (int x = 0; x < wd; x++) {
+				float val = field[y * w + x + i] / 255.f;
+				float weight = x < 3? 0.5f + x / 6.f: x + 3 >= wd? 0.5f + (wd - 1.f - x) / 6.f: 1.f;
+				operator()(x, y) = clamp(weight * val + 1.f - weight, 0.f, 1.f) * 255.f;
 			}
 		}
 	}
@@ -447,11 +445,10 @@ void ListProc::process() {
 
 	for (int y = 0; y + 1 < hp; y++) {
 		for (int x = 0; x + 1 < wp; x++) {
-			vec2 o = (points[(y + 1) * wp + x] - points[y * wp + x] + points[(y + 1) * wp + x + 1] - points[y * wp + x + 1]) / Fields::hd;
-			vec3 u1(points[y * wp + x] - o, 1.f);
-			vec3 u2(points[y * wp + x + 1] - o, 1.f);
-			vec3 u3(points[(y + 1) * wp + x + 1] + o, 1.f);
-			vec3 u4(points[(y + 1) * wp + x] + o, 1.f);
+			vec3 u1(points[y * wp + x], 1.f);
+			vec3 u2(points[y * wp + x + 1], 1.f);
+			vec3 u3(points[(y + 1) * wp + x + 1], 1.f);
+			vec3 u4(points[(y + 1) * wp + x], 1.f);
 
 			if (length(u4 - u1) + length(u3 - u2) == 0.f)
 				continue;
@@ -459,17 +456,17 @@ void ListProc::process() {
 			if (fields.W() <= 1 || fields.H() <= 1)
 				continue;
 
-			vec3 v1(0.f, -2.f, 1.f);
-			vec3 v2(fields.W() - 1.f, -2.f, 1.f);
-			vec3 v3(fields.W() - 1.f, fields.H() + 1.f, 1.f);
-			vec3 v4(0.f, fields.H() + 1.f, 1.f);
+			vec3 v1(0.f, 0.f, 1.f);
+			vec3 v2(fields.W() - 1.f, 0.f, 1.f);
+			vec3 v3(fields.W() - 1.f, fields.H() - 1.f, 1.f);
+			vec3 v4(0.f, fields.H() - 1.f, 1.f);
 
 			vec3 u = mul(inverse(mat3(u1, u2, u3)), u4);
 			vec3 v = mul(inverse(mat3(v1, v2, v3)), v4);
 			mat3 m = mul(mat3(u1 * u.x, u2 * u.y, u3 * u.z), inverse(mat3(v1 * v.x, v2 * v.y, v3 * v.z)));
 
 			uint8_t mi = 255, ma = 0;
-			for (int yf = -2; yf < fields.H() + 2; yf++) {
+			for (int yf = 0; yf < fields.H(); yf++) {
 				for (int xf = 0; xf < fields.W(); xf++) {
 					vec3 r = mul(m, vec3(xf, yf, 1.f));
 					r.x = clamp(r.x / r.z, 0.f, float(w - 1));
@@ -491,7 +488,7 @@ void ListProc::process() {
 					ma = max(ma, fields(xf, yf));
 				}
 			}
-			for (int yf = -2; yf < fields.H() + 2; yf++)
+			for (int yf = 0; yf < fields.H(); yf++)
 				for (int xf = 0; xf < fields.W(); xf++)
 					fields(xf, yf) = clamp((fields(xf, yf) - mi) * 255.f / (ma - mi), 0.f, 255.f);
 

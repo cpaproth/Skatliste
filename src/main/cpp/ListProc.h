@@ -47,9 +47,9 @@ public:
 	bool first();
 	bool next();
 	int separate(int);
-	int W() {return D > 0? wd: fields[cur].all.size() / (hd + 4);}
+	int W() {return D > 0? wd: fields[cur].all.size() / hd;}
 	int H() {return hd;}
-	uint8_t* data() {return D > 0? fields[cur].chars[D - 1].data(): fields[cur].all.data() + W() * 2;}
+	uint8_t* data() {return D > 0? fields[cur].chars[D - 1].data(): fields[cur].all.data();}
 	uint8_t& operator()(int x, int y) {return data()[y * W() + x];}
 	std::string& str() {return fields[cur].text;}
 private:
