@@ -81,15 +81,11 @@ int Fields::separate(int mode) {
 		sep_mode0(W(), H(), data(), 1);
 
 	for (D = fields[cur].chars.size(); D > 0; D--) {
-		uint8_t mi = *min_element(data(), data() + W() * H()), ma = *max_element(data(), data() + W() * H());
 		uint8_t cmi = 255, cma = 0;
-		for (int y = 0; y < H(); y++) {
-			for (int x = 0; x < W(); x++) {
-				if (x > 2 && x < W() - 3 && y > 2 && y < H() - 3) {
-					cmi = min(cmi, operator()(x, y));
-					cma = max(cma, operator()(x, y));
-				}
-				operator()(x, y) = (operator()(x, y) - mi) * 255 / max(1, ma - mi);
+		for (int y = 3; y < H() - 3; y++) {
+			for (int x = 3; x < W() - 3; x++) {
+				cmi = min(cmi, operator()(x, y));
+				cma = max(cma, operator()(x, y));
 			}
 		}
 		if (cma - cmi < 64)
@@ -481,21 +477,20 @@ void ListProc::process() {
 					uint8_t& m1 = xi + 1 < w? input[yi * w + xi + 1]: m0;
 					uint8_t& m2 = yi + 1 < h? input[(yi + 1) * w + xi]: m0;
 					uint8_t& m3 = xi + 1 < w && yi + 1 < h? input[(yi + 1) * w + xi + 1]: xi + 1 < w? m1: m2;
-					float val = (1.f - wx) * (1.f - wy) * m0 + wx * (1.f - wy) * m1 + (1.f - wx) * wy * m2 + wx * wy * m3;
-
-					float e = 2.f;
+					float e = faint_chars? 2.f: 1.f;
 					wx = pow(wx, min(m0, m2) < min(m1, m3)? e: 1.f / e);
 					wy = pow(wy, min(m0, m1) < min(m2, m3)? e: 1.f / e);
-					//val = (1.f - wx) * (1.f - wy) * m0 + wx * (1.f - wy) * m1 + (1.f - wx) * wy * m2 + wx * wy * m3;
+					float val = (1.f - wx) * (1.f - wy) * m0 + wx * (1.f - wy) * m1 + (1.f - wx) * wy * m2 + wx * wy * m3;
 
 					fields(xf, yf) = clamp(val, 0.f, 255.f);
 					mi = min(mi, fields(xf, yf));
 					ma = max(ma, fields(xf, yf));
 				}
 			}
-			for (int yf = 0; yf < fields.H(); yf++)
+			for (int yf = 0; yf < fields.H() && ma - mi > 64; yf++)
 				for (int xf = 0; xf < fields.W(); xf++)
-					fields(xf, yf) = clamp((fields(xf, yf) - mi) * 255.f / (ma - mi), 0.f, 255.f);
+					fields(xf, yf) = pow(clamp((fields(xf, yf) - mi) / float(ma - mi), 0.f, 1.f), faint_chars? 1.5f: 1.f) * 255.f
+							;
 
 		}
 	}
