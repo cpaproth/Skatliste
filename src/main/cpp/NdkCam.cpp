@@ -115,10 +115,10 @@ void NdkCam::onimage(void* context, AImageReader* reader) {
 			size_t posU = (yi >> 1) * rsU + (xi >> 1) * psU;
 			size_t posV = (yi >> 1) * rsV + (xi >> 1) * psV;
 			if (posY < lY && posU < lU && posV < lV) {
-				cam->lum[pos >> 2] = Y[posY];
 				cam->rgba[pos + 0] = max(0, min(Y[posY] + V[posV] - 128, 255));
 				cam->rgba[pos + 1] = max(0, min(Y[posY] - U[posU] - V[posV] + 256, 255));
 				cam->rgba[pos + 2] = max(0, min(Y[posY] + U[posU] - 128, 255));
+				cam->lum[pos >> 2] = *min(&cam->rgba[pos], &cam->rgba[pos] + 3);
 			}
 		}
 	}

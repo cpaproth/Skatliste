@@ -354,8 +354,8 @@ vector<vec2> ListProc::filter(vector<int>& l) {
 
 vec2 ListProc::find_corner(const vec2& p, const vector<int>& c) {
 	int m = INT_MIN, xm = 0, ym = 0;
-	for (int x = max(2, (int)p.x - 4); x < min(w - 2, (int)p.x + 5); x++) {
-		for (int y = max(2, (int)p.y - 4); y < min(h - 2, (int)p.y + 5); y++) {
+	for (int x = max(2, (int)p.x - 6); x < min(w - 2, (int)p.x + 7); x++) {
+		for (int y = max(2, (int)p.y - 6); y < min(h - 2, (int)p.y + 7); y++) {
 			if (c[y * w + x] > m) {
 				m = c[y * w + x];
 				xm = x;
@@ -377,7 +377,7 @@ vec2 ListProc::find_corner(const vec2& p, const vector<int>& c) {
 		}
 	}
 	vec2 n = vec2((float)xc, (float)yc) / (float)sumc;
-	return length(p - n) < 2.f? n: p;
+	return length(p - n) < 3.f? n: p;
 }
 
 void ListProc::process() {
@@ -433,7 +433,7 @@ void ListProc::process() {
 		if (length(offset) == 0.f)
 			continue;
 		for (int j = 0; j < points.size(); j++)
-			points[j] += 0.5f * offset * exp(-0.7f * pow(length(points[j] - point) / 50.f, 2.f));
+			points[j] += 0.5f * offset * exp(-0.7f * pow(length(points[j] - point) / 75.f, 2.f));
 	}
 
 	for (int y = 0; y < hp; y++)
@@ -482,6 +482,11 @@ void ListProc::process() {
 					uint8_t& m2 = yi + 1 < h? input[(yi + 1) * w + xi]: m0;
 					uint8_t& m3 = xi + 1 < w && yi + 1 < h? input[(yi + 1) * w + xi + 1]: xi + 1 < w? m1: m2;
 					float val = (1.f - wx) * (1.f - wy) * m0 + wx * (1.f - wy) * m1 + (1.f - wx) * wy * m2 + wx * wy * m3;
+
+					float e = 2.f;
+					wx = pow(wx, min(m0, m2) < min(m1, m3)? e: 1.f / e);
+					wy = pow(wy, min(m0, m1) < min(m2, m3)? e: 1.f / e);
+					//val = (1.f - wx) * (1.f - wy) * m0 + wx * (1.f - wy) * m1 + (1.f - wx) * wy * m2 + wx * wy * m3;
 
 					fields(xf, yf) = clamp(val, 0.f, 255.f);
 					mi = min(mi, fields(xf, yf));

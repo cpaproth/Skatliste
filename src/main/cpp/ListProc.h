@@ -74,7 +74,7 @@ public:
 
 	std::string test_img;
 	int edge_th = 10;
-	int line_th = 40;
+	int line_th = 30;
 	bool big_chars = false;
 	bool faint_chars = false;
 
@@ -90,7 +90,7 @@ private:
 	int32_t w = 0;
 	int32_t h = 0;
 	static const int angs = 21;
-	static const int range = 5;
+	static const int range = 8;
 	std::vector<float> cosa;
 	std::vector<float> sina;
 

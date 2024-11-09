@@ -87,7 +87,7 @@ float Players::prize_season(int i) {
 const vector<const char*> Program::chars{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-"};
 const map<string, string> Program::def_cfg{{"csv", "players.csv"}, {"three", "0"}, {"scale", "1.0"}, {"bet", "10.0"}, {"prizes", "3"}, {"bpprize", "4"}};
 
-Program::Program(const string& p) : path(p), cam(480, 640, 0), clss(p, Fields::wd, Fields::hd, chars.size()), converting(false) {
+Program::Program(const string& p) : path(p), cam(720, 960, 0), clss(p, Fields::wd, Fields::hd, chars.size()), converting(false) {
 	glEnable(GL_TEXTURE_2D);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	for (const auto& tex : {&cap_tex, &dig_tex}) {
@@ -270,7 +270,7 @@ void Program::show_config(float sc) {
 	ImGui::SameLine();
 	bool test = !proc.test_img.empty();
 	if (ImGui::Checkbox("Test", &test))
-		proc.test_img = test? path + "/test.480.ubyte": "";
+		proc.test_img = test? path + "/test.720.ubyte": "";
 	ImGui::SliderInt("Edge", &proc.edge_th, 1, 100);
 	ImGui::SliderInt("Line", &proc.line_th, 1, 100);
 
@@ -575,7 +575,7 @@ void Program::show_results() {
 }
 
 bool Program::check_lines() {
-	float th = 3.f;
+	float th = 5.f;
 
 	for (cols = 0; fields.select(cols, 0); cols++);
 	for (rows = 0; fields.select(0, rows); rows++);
