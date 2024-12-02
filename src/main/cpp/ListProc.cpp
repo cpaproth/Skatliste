@@ -489,9 +489,7 @@ void ListProc::process() {
 			}
 			for (int yf = 0; yf < fields.H() && ma - mi > 64; yf++)
 				for (int xf = 0; xf < fields.W(); xf++)
-					fields(xf, yf) = pow(clamp((fields(xf, yf) - mi) / float(ma - mi), 0.f, 1.f), faint_chars? 1.5f: 1.f) * 255.f
-							;
-
+					fields(xf, yf) = pow(clamp((fields(xf, yf) - mi) / float(ma - mi), 0.f, 1.f), faint_chars? 1.5f: 1.f) * 255.f;
 		}
 	}
 }

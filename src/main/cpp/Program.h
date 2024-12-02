@@ -23,12 +23,12 @@ public:
 	int num() {return count_if(ps.begin(), ps.end(), [](const Player& p) {return p.plays;});}
 	bool noround() {return !num() && find_if(ps.begin(), ps.end(), [](const Player& p) {return p.sum() != 0;}) == ps.end();}
 	bool find(const std::string& n) {return find_if(ps.begin(), ps.end(), [&](const Player& p) {return p.name == n;}) != ps.end();}
-	void add_name(const std::string& n) {ps.push_back({n, true, 0, 0, {}});}
+	void add_name(const std::string& n) {cur = n; ps.push_back({n, true, 0, 0, {}});}
 	void del(const std::string& n) {ps.erase(find_if(ps.begin(), ps.end(), [&](const Player& p) {return p.name == n;}));}
 	bool filled() {return num() && find_if(ps.begin(), ps.end(), [](const Player& p) {return p.plays && p.score == 0;}) == ps.end();}
 	void add_score() {for_each(ps.begin(), ps.end(), [](Player& p) {p.result = p.sum(); p.score = 0;});}
 	void add_sum(const std::string& d) {dates.push_front(d); for_each(ps.begin(), ps.end(), [](Player& p) {p.scores.push_front(p.sum()); p.result = p.score = 0; p.plays = false;});}
-	void clear() {prize = 0.f; remove = order = 0; dates.clear(); for_each(ps.begin(), ps.end(), [](Player& p) {p = {p.name, false, 0, 0, {}};});}
+	void clear() {prize = 0.f; remove = order = 0; dates.clear(); cur.clear(); for_each(ps.begin(), ps.end(), [](Player& p) {p = {p.name, false, 0, 0, {}};});}
 	const std::string& name(int i) {return ps[i].name;}
 	const std::string& date(int i) {return dates[i];}
 	bool& plays(int i) {return ps[i].plays;}
@@ -37,11 +37,13 @@ public:
 	int total(int i) {return ps[i].best(remove + noround(), rounds());}
 	int removed(int i) {int t = 0; for(int& s: ps[i].scores) t += s; return t + sum(i) - total(i);}
 	int score(int i, int d) {return d < ps[i].scores.size()? ps[i].scores[d]: 0;}
-	void sort_name() {sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 0; return a.plays && !b.plays || a.plays == b.plays && a.name < b.name;});}
-	void sort_score() {stable_sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 1; return a.plays && !b.plays || a.plays == b.plays && a.score > b.score;});}
-	void sort_sum() {stable_sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 2; return a.plays && !b.plays || a.plays == b.plays && a.sum() > b.sum();});}
-	void sort_total() {int r = remove + noround(); stable_sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {order = 3; return a.best(r, rounds()) > b.best(r, rounds());});}
+	void sort_name() {order = 0; sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {return a.plays && !b.plays || a.plays == b.plays && a.name < b.name;});}
+	void sort_score() {order = 1; cur.clear(); stable_sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {return a.plays && !b.plays || a.plays == b.plays && a.score > b.score;});}
+	void sort_sum() {order = 2; cur.clear(); stable_sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {return a.plays && !b.plays || a.plays == b.plays && a.sum() > b.sum();});}
+	void sort_total() {order = 3; cur.clear(); int r = remove + noround(); stable_sort(ps.begin(), ps.end(), [&](const Player& a, const Player& b) {return a.best(r, rounds()) > b.best(r, rounds());});}
 	int sorted() {return order;}
+	void select(int i) {cur = name(i);}
+	bool selected(int i) {return cur == name(i);}
 	std::pair<int, int> tables() {int n = num(), t3 = three? (n - n % 3 * 4) / 3: (4 - n % 4) % 4, t4 = (n - 3 * t3) / 4; return {t4, t3};}
 	int table(int i) {int t4 = tables().first; return i < 4 * t4? i / 4 + 1: (i - 4 * t4) / 3 + 1 + t4;}
 	int seat(int i) {int t4 = tables().first; return i < 4 * t4? i % 4 + 1: (i - 4 * t4) % 3 + 1;}
@@ -60,6 +62,7 @@ private:
 	};
 	std::deque<std::string> dates;
 	std::vector<Player> ps;
+	std::string cur;
 	int order;
 };
 

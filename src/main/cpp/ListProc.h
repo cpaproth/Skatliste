@@ -74,7 +74,7 @@ public:
 
 	std::string test_img;
 	int edge_th = 10;
-	int line_th = 30;
+	int line_th = 20;
 	bool big_chars = false;
 	bool faint_chars = false;
 

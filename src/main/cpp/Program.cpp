@@ -67,14 +67,14 @@ void Players::save(const string& filename) {
 }
 
 float Players::prize_round(int i) {
-	int n = num(), przs = (n - 1) / max(1, bpprize) + 1;
-	float e = 0.5f, m = 0.5f, o = 0.5f, eps = 1.f + FLT_EPSILON;
-	auto f = [&](int p, int t, float (*r)(float)) {float s = 0.f; while (p <= t) s += r(0.5f + o + (m * n - 1.f) * pow((float)p++ / przs, 1.f / e)); return s;};
-	for (float mi = 0.f, ma = 1.f, s; (s = f(1, przs, fabs)) != n && ma / mi > eps; m = (mi + ma) / 2.f)
-		(s > n? ma: mi) = m;
-	for (float mi = 0.f, ma = 1.f, s; (s = f(1, przs, round)) != n && ma / mi > eps; o = (mi + ma) / 2.f)
+	int n = num(), bpp = min(bpprize, n), przs = (n - 1) / max(1, bpp) + 1;
+	float m = round((bpp - 1.f) * pow(n / float(bpp), 0.45f)), e = 0.5f, o = 0.5f, eps = 1.f + FLT_EPSILON;
+	auto f = [&](int p, int t) {float s = 0.f; while (p <= t) s += round(1.5f + o + 2.f * m * pow((float)p++ / przs, 1.f / e - 1.f)) / 2.f; return s;};
+	for (float mi = 0.f, ma = 1.f, s; (s = f(1, przs)) != n && ma / mi > eps; e = (mi + ma) / 2.f)
+		(s > n? ma: mi) = e;
+	for (float mi = 0.f, ma = 1.f, s; (s = f(1, przs)) != n && ma / mi > eps; o = (mi + ma) / 2.f)
 		(s > n? ma: mi) = o;
-	return i < przs? f(przs - i, przs - i, round) * bet: 0.f;
+	return i < przs? f(przs - i, przs - i) * bet: 0.f;
 }
 
 float Players::prize_season(int i) {
@@ -410,11 +410,13 @@ void Program::show_players() {
 			ImGui::PushID(r);
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
-			if (ImGui::Selectable((to_string(r + 1) + ". " + players.name(r)).c_str(), &players.plays(r)))
+			if (!players.selected(r) && ImGui::Selectable((to_string(r + 1) + ". " + players.name(r)).c_str(), players.plays(r)))
+				players.select(r);
+			else if (players.selected(r) && ImGui::Checkbox(players.name(r).c_str(), &players.plays(r)))
 				players.sort_name();
 
 			ImGui::TableNextColumn();
-			if (players.plays(r) && ImGui::Button(to_string(players.score(r)).c_str(), {ImGui::CalcTextSize(" 9999 ").x, 0}) && (players.score(r) == 0 || result == 0)) {
+			if (players.plays(r) && ImGui::Button(to_string(players.score(r)).c_str(), {ImGui::CalcTextSize(" 9999 ").x, 0}) && (players.score(r) == 0 || result == 0) && players.selected(r)) {
 				players.score(r) = result;
 				list = !convert;
 			} else if (!players.plays(r) && players.score(r) != 0) {
@@ -575,7 +577,7 @@ void Program::show_results() {
 }
 
 bool Program::check_lines() {
-	float th = 5.f;
+	float th = 6.f;
 
 	for (cols = 0; fields.select(cols, 0); cols++);
 	for (rows = 0; fields.select(0, rows); rows++);
