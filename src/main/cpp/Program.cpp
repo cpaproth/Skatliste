@@ -457,6 +457,9 @@ void Program::show_players() {
 			ImGui::PopID();
 		}
 
+		if (ImGui::IsMouseDragging(0))
+			ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
+
 		ImGui::EndTable();
 	}
 }
@@ -529,9 +532,9 @@ void Program::show_results() {
 			ImGui::PopStyleColor(2);
 			ImGui::PopID();
 		}
+		float p = ImGui::GetCursorScreenPos().y;
 
-		int n = 1;
-		for (int r = 1; r < l.size(); r++) {
+		for (int r = 1, n = 1; r < l.size(); r++) {
 			int res = 0;
 
 			ImGui::PushID(r);
@@ -571,6 +574,14 @@ void Program::show_results() {
 
 			ImGui::PopID();
 		}
+
+		if (ImGui::IsMouseDragging(0) && ImGui::GetMousePos().x < ImGui::GetWindowContentRegionMax().x && min(ImGui::GetMousePos().y, ImGui::GetIO().MouseClickedPos[0].y) > p) {
+			ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
+			ImGui::SetCursorScreenPos(ImGui::GetMousePos());
+			ImGui::SetKeyboardFocusHere();
+			ImGui::InvisibleButton("Invisible", {});
+		}
+
 		ImGui::EndTable();
 	}
 	ImGui::PopStyleVar();
