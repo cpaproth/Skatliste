@@ -78,6 +78,7 @@ public:
 	void learn(uint8_t*, uint8_t);
 	std::tuple<uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t> classify(uint8_t*);
 	NeuralNet::Values classify(const NeuralNet::Values& in) {return nn.forward(in);}
+	//NeuralNet::Values classify(const NeuralNet::Values& in) {auto r = nn.forward(in); float s = 0.f; for (auto& v : r) s += v; for (auto& v : r) v /= s; return r;}
 
 private:
 	std::string path;

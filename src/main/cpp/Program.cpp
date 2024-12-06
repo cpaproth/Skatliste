@@ -416,6 +416,7 @@ void Program::show_players() {
 				players.sort_name();
 
 			ImGui::TableNextColumn();
+			ImGui::PushStyleColor(ImGuiCol_Button, {0.f, 0.5f, 0.5f, players.selected(r)? 1.f: 0.2f});
 			if (players.plays(r) && ImGui::Button(to_string(players.score(r)).c_str(), {ImGui::CalcTextSize(" 9999 ").x, 0}) && (players.score(r) == 0 || result == 0) && players.selected(r)) {
 				players.score(r) = result;
 				list = !convert;
@@ -426,6 +427,7 @@ void Program::show_players() {
 				ImGui::SameLine();
 				ImGui::Text("%d/%d", players.table(r), players.seat(r));
 			}
+			ImGui::PopStyleColor();
 
 			ImGui::TableNextColumn();
 			if (players.sum(r) != 0)
@@ -693,17 +695,14 @@ int Program::dist(const string& s, const string& t) {
 	return v0[t.length()];
 }
 
-int Program::dist(const Game& game, bool win, int last, const string& name, const string& tips, int extra, const string& points, const string& score) {
-	int res = dist(game.name, name) + dist(game.tips, tips) + abs(game.extra - extra) - points.length() - score.length();
-	if (game.points == 0) {
-		res += points.length() + score.length();
-	} else if (win) {
+int Program::dist(const Game& game, bool win, const string& name, const string& tips, int extra, const string& points) {
+	int res = dist(game.name, name) + dist(game.tips, tips) + abs(game.extra - extra) - points.length();
+	if (game.points == 0)
+		res += points.length();
+	else if (win)
 		res += dist(to_string(game.points), points);
-		res += dist(to_string(abs(last + game.points)), score);
-	} else {
+	else
 		res += dist(to_string(2 * game.points), points);
-		res += dist(to_string(abs(last - 2 * game.points)), score);
-	}
 	return res;
 }
 
@@ -727,22 +726,49 @@ void Program::process() {
 		auto f = [&](int x) {fields.select(fcol + x, i); return fields.str();};
 		string name = f(0), tips = f(1) + f(2);
 		int extra = !f(3).empty() + !f(4).empty() + !f(5).empty() + !f(6).empty() + !f(7).empty() + !f(8).empty();
+		string scores[4] = {f(11), f(14), f(17), nplayer == 4? f(20): ""};
 
+		map<int, int> ps;
+		for (const Game& g : games) {
+			int d = dist(g, true, name, tips, extra, f(9));
+			auto p = ps.find(g.points);
+			if (p == ps.end() || d < p->second)
+				ps[g.points] = d;
+			d = dist(g, false, name, tips, extra, f(10));
+			p = ps.find(-2 * g.points);
+			if (p == ps.end() || d < p->second)
+				ps[-2 * g.points] = d;
+		}
+		multimap<int, int> points;
+		for (const auto& p : ps)
+			points.insert({p.second, p.first});
+
+		map<int, int> caches[4];
 		multimap<int, tuple<int, int, int>> best;
 		for (int l = 0; l < lists.size(); l++) {
-			for (int g = 0; g < games.size(); g++) {
-				for (int p = 0; p < nplayer; p++) {
-					if (nplayer == 4 && (i - frow) % nplayer == p)
-						continue;
-					best.insert({dists[l] + dist(games[g], true, lists[l][i].scores[p], name, tips, extra, f(9), f(11 + 3 * p)), {games[g].points, p, l}});
-					best.insert({dists[l] + dist(games[g], false, lists[l][i].scores[p], name, tips, extra, f(10), f(11 + 3 * p)), {-2 * games[g].points, p, l}});
-				}
-			}
-			best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, extra, "", ""), {0, -1, l}});
+
+			best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, name, tips, extra, ""), {0, -1, l}});
 			int sum = 0;
 			for (int p = 0; p < nplayer; p++)
-				sum += dist(to_string(abs(lists[l][i].scores[p])), f(11 + 3 * p)) - f(11 + 3 * p).length();
-			best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, 0, name, tips, extra, "", "") + sum, {0, -2, l}});
+				sum += dist(to_string(abs(lists[l][i].scores[p])), scores[p]) - scores[p].length();
+			best.insert({dists[l] + dist(Game{"", "", 0, 0}, true, name, tips, extra, "") + sum, {0, -2, l}});
+
+			for (int p = 0; p < nplayer; p++) {
+				if (nplayer == 4 && (i - frow) % nplayer == p)
+					continue;
+				for (const auto& g : points) {
+					int b = dists[l] + g.first - scores[p].length();
+					if (b > best.begin()->first + 1)
+						break;
+					int s = abs(lists[l][i].scores[p] + g.second);
+					auto c = caches[p].find(s);
+					if (c == caches[p].end())
+						c = caches[p].insert({s, dist(to_string(s), scores[p])}).first;
+					b += c->second;
+					if (b <= best.begin()->first + 1)
+						best.insert({b, {g.second, p, l}});
+				}
+			}
 
 			if (!converting)
 				return;
@@ -750,13 +776,8 @@ void Program::process() {
 
 		vector<List> nlists;
 		dists.clear();
-		set<tuple<int, int, int>> rep;
-		int o = lists.size() > 1000? 0: 1;
+		int o = best.size() > 100000? 0: 1;
 		for (auto it = best.begin(); it != best.end() && it->first <= best.begin()->first + o; it++) {
-			if (rep.count(it->second) != 0)
-				continue;
-			rep.insert(it->second);
-
 			int v, p, l;
 			tie(v, p, l) = it->second;
 			nlists.push_back(lists[l]);

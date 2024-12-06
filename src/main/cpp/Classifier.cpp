@@ -268,7 +268,7 @@ tuple<uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t> Classifier::classify
 	NeuralNet::Values in(w * h), out;
 	for (int i = 0; i < in.size(); i++)
 		in[i] = chr[i] / 255.f;
-	out = nn.forward(in);
+	out = classify(in);
 	out.resize(n);
 	auto mn = max_element(out.begin(), out.end());
 
