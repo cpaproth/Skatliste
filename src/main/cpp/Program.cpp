@@ -743,7 +743,7 @@ void Program::process() {
 		for (const auto& p : ps)
 			points.insert({p.second, p.first});
 
-		map<int, int> caches[4];
+		unordered_map<int, int> caches[4];
 		multimap<int, tuple<int, int, int>> best;
 		for (int l = 0; l < lists.size(); l++) {
 
@@ -774,10 +774,14 @@ void Program::process() {
 				return;
 		}
 
+		while (best.size() > 100000 && best.rbegin()->first != best.begin()->first)
+			best.erase(best.rbegin()->first);
+
+		vector<int> count(10, 0);
+
 		vector<List> nlists;
 		dists.clear();
-		int o = best.size() > 100000? 0: 1;
-		for (auto it = best.begin(); it != best.end() && it->first <= best.begin()->first + o; it++) {
+		for (auto it = best.begin(); it != best.end() && it->first <= best.begin()->first + 1; it++) {
 			int v, p, l;
 			tie(v, p, l) = it->second;
 			nlists.push_back(lists[l]);
@@ -788,8 +792,18 @@ void Program::process() {
 
 			if (!converting)
 				return;
+
+			count[2 + p + (v < 0? 4: 0)]++;
 		}
 		swap(nlists, lists);
+
+		int& c = count[2 + lists[0].back().player + (lists[0].back().points < 0? 4: 0)];
+		if (c * 5 < lists.size() * 3) {
+			c = 0;
+			//cout << i << " " << max_element(count.begin(), count.end()) - count.begin() << endl;
+		} else if (c > 100) {
+			//cout << i << endl;
+		}
 
 		lock_guard<std::mutex> lg(mut);
 		toplist = lists[0];
@@ -804,6 +818,8 @@ void Program::process() {
 		if (lists.front().back().player == -2)
 			break;
 	}
+
+	auto start = chrono::high_resolution_clock().now();
 
 	set<int> points;
 	for (int g = 0; g < games.size(); g++)
@@ -855,4 +871,6 @@ void Program::process() {
 		for (int n = 0; n < ls.size() && n < 50; n++)
 			topscores[p].push_back(ls[n]);
 	}
+
+	//cout << chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock().now() - start).count() << " ms" << endl;
 }
