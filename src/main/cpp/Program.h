@@ -116,6 +116,7 @@ private:
 	std::mutex mut;
 	List toplist;
 	std::array<std::vector<int>, 4> topscores;
+	std::vector<float> quality;
 
 	void show_config(float);
 	void show_players();

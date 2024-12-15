@@ -544,8 +544,13 @@ void Program::show_results() {
 
 			ImGui::TableNextColumn();
 			ImGui::SetNextItemWidth(-1);
+			if (quality[r] < 0.f)
+				ImGui::PushStyleColor(ImGuiCol_Button, {0.25f + 0.25f * abs(quality[r]), 0.f, 0.25f, 1.f});
+			else
+				ImGui::PushStyleColor(ImGuiCol_Button, {0.5f * abs(quality[r]), 0.25f, 0.f, 1.f});
 			if (l[r].points != 0 &&	ImGui::Button(to_string(n++).c_str(), {ImGui::GetContentRegionAvail().x, 0}))
 				res += (l[r].points = 0, 1);
+			ImGui::PopStyleColor();
 
 			ImGui::TableNextColumn();
 			ImGui::SetNextItemWidth(-1);
@@ -758,14 +763,14 @@ void Program::process() {
 					continue;
 				for (const auto& g : points) {
 					int b = dists[l] + g.first - scores[p].length();
-					if (b > best.begin()->first + 1)
+					if (b > best.begin()->first + 2)
 						break;
 					int s = abs(lists[l][i].scores[p] + g.second);
 					auto c = caches[p].find(s);
 					if (c == caches[p].end())
 						c = caches[p].insert({s, dist(to_string(s), scores[p])}).first;
 					b += c->second;
-					if (b <= best.begin()->first + 1)
+					if (b <= best.begin()->first + 2)
 						best.insert({b, {g.second, p, l}});
 				}
 			}
@@ -777,11 +782,10 @@ void Program::process() {
 		while (best.size() > 100000 && best.rbegin()->first != best.begin()->first)
 			best.erase(best.rbegin()->first);
 
-		vector<int> count(10, 0);
-
+		int same = 1;
 		vector<List> nlists;
 		dists.clear();
-		for (auto it = best.begin(); it != best.end() && it->first <= best.begin()->first + 1; it++) {
+		for (auto it = best.begin(); it != best.end() && it->first <= best.begin()->first + 2; it++) {
 			int v, p, l;
 			tie(v, p, l) = it->second;
 			nlists.push_back(lists[l]);
@@ -790,22 +794,16 @@ void Program::process() {
 				nlists.back().back().scores[p] += v;
 			dists.push_back(it->first);
 
+			same = get<0>(best.begin()->second) * v < 0 || get<1>(best.begin()->second) != p? -1: same;
+
 			if (!converting)
 				return;
-
-			count[2 + p + (v < 0? 4: 0)]++;
 		}
 		swap(nlists, lists);
 
-		int& c = count[2 + lists[0].back().player + (lists[0].back().points < 0? 4: 0)];
-		if (c * 5 < lists.size() * 3) {
-			c = 0;
-			//cout << i << " " << max_element(count.begin(), count.end()) - count.begin() << endl;
-		} else if (c > 100) {
-			//cout << i << endl;
-		}
-
 		lock_guard<std::mutex> lg(mut);
+		quality.resize(lists[0].size(), 0.f);
+		quality.back() = clamp(log(float(lists.size()) / nlists.size()) / log(10.f), 0.f, 1.f) * same;
 		toplist = lists[0];
 		topscores.fill({0});
 		for (int r = 1; r < toplist.size(); r++) {
@@ -819,58 +817,50 @@ void Program::process() {
 			break;
 	}
 
-	auto start = chrono::high_resolution_clock().now();
-
-	set<int> points;
-	for (int g = 0; g < games.size(); g++)
-		points.insert(games[g].points);
 
 	for (int p = 0; p < nplayer; p++) {
-		set<int> rs;
+		unordered_map<int, pair<int, int>> ls{{0, {0, 0}}};
 		for (int r = 1; r < lists[0].size(); r++) {
-			if (lists[0][r].player == p && lists[0][r].points != 0 || lists[0][r].player == -2)
-				rs.insert(r);
-		}
+			if (lists[0][r].player != -2 && (lists[0][r].player != p || lists[0][r].points == 0))
+				continue;
 
-		vector<int> ls{0}, ds{0};
-		for (auto rit = rs.begin(); rit != rs.end(); rit++) {
-			auto f = [&](int x) {fields.select(fcol + x, *rit - 1); return fields.str();};
+			auto f = [&](int x) {fields.select(fcol + x, r - 1); return fields.str();};
+			string score = f(11 + 3 * p);
 
-			multimap<int, int> best;
-			for (int l = 0; l < ls.size(); l++) {
-				for (auto pit = points.begin(); pit != points.end(); pit++) {
-					if (lists[0][*rit].points > 0)
-						best.insert({ds[l] + dist(f(9), to_string(*pit)) + dist(f(11 + 3 * p), to_string(abs(ls[l] + *pit))), ls[l] + *pit});
-					else if (lists[0][*rit].points < 0)
-						best.insert({ds[l] + dist(f(10), to_string(*pit * 2)) + dist(f(11 + 3 * p), to_string(abs(ls[l] - *pit * 2))), ls[l] - *pit * 2});
+			map<int, int> points;
+			for (const Game& g : games) {
+				if (lists[0][r].points > 0)
+					points[g.points] = dist(to_string(g.points), f(9));
+				else if (lists[0][r].points < 0)
+					points[-2 * g.points] = dist(to_string(2 * g.points), f(10));
+			}
+
+			unordered_map<int, pair<int, int>> best;
+			for (const auto& l : ls) {
+				if (lists[0][r].player == -2)
+					best.insert({l.first, {l.second.first + dist(to_string(abs(l.first)), score), 0}});
+				for (const auto& g : points) {
+					int s = l.first + g.first;
+					auto b = best.find(s);
+					if (b == best.end()) {
+						int d = dist(to_string(abs(s)), score);
+						b = best.insert({s, {l.second.first + g.second + d, d}}).first;
+					} else {
+						b->second.first = min(b->second.first, l.second.first + g.second + b->second.second);
+					}
 				}
-				if (lists[0][*rit].player == -2)
-					best.insert({ds[l] + dist(f(11 + 3 * p), to_string(abs(ls[l]))), ls[l]});
 
 				if (!converting)
 					return;
 			}
-
-			ls.clear();
-			ds.clear();
-			set<int> rep;
-			for (auto it = best.begin(); it != best.end() && ls.size() < 10000; it++) {
-				if (rep.count(it->second) != 0)
-					continue;
-				rep.insert(it->second);
-
-				ls.push_back(it->second);
-				ds.push_back(it->first);
-
-				if (!converting)
-					return;
-			}
+			swap(ls, best);
 		}
 
+		set<pair<int, int>> best;
+		for (const auto& l : ls)
+			best.insert({l.second.first, l.first});
 		lock_guard<std::mutex> lg(mut);
-		for (int n = 0; n < ls.size() && n < 50; n++)
-			topscores[p].push_back(ls[n]);
+		for (auto it = best.begin(); it != best.end() && topscores[p].size() < 50; it++)
+			topscores[p].push_back(it->second);
 	}
-
-	//cout << chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock().now() - start).count() << " ms" << endl;
 }
