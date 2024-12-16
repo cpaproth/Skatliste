@@ -469,11 +469,11 @@ void Program::show_players() {
 void Program::show_results() {
 	if (!worker.joinable()) {
 		toplist.clear();
-		topscores.fill({0});
+		topscores.fill({0, {}});
 		worker = thread(&Program::process, this);
 	} else if (!converting) {
 		worker.join();
-		topscores.fill({0});
+		topscores.fill({0, {}});
 		worker = thread(&Program::process, this);
 	}
 
@@ -498,6 +498,8 @@ void Program::show_results() {
 			}
 		}
 
+		float p = 0.f;
+
 		ImGui::TableNextRow();
 		ImGui::TableNextColumn();
 		ImGui::SetNextItemWidth(-1);
@@ -506,7 +508,7 @@ void Program::show_results() {
 		ImGui::SetWindowFontScale(1.f);
 		ImGui::TableNextColumn();
 		for (int i = 0; i < nplayer && l.size() > 0; i++) {
-			auto& s = topscores[i];
+			auto& t = topscores[i];
 
 			ImGui::PushID(i);
 			ImGui::PushStyleColor(ImGuiCol_Button, {0.f, 0.5f, 0.5f, 1.f});
@@ -514,18 +516,26 @@ void Program::show_results() {
 			ImGui::TableNextColumn();
 			ImGui::SetNextItemWidth(-1);
 
-			if (ImGui::BeginCombo("##1", to_string(s[0]).c_str(), ImGuiComboFlags_NoArrowButton)) {
-				for (int  j = 1; j < s.size(); j++) {
-					if (ImGui::Selectable(to_string(s[j]).c_str()))
-						swap(s[0], s[j]);
+			if (ImGui::BeginCombo("##1", to_string(t.first).c_str(), ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_HeightLargest)) {
+				for (const auto& s : t.second) {
+					if (s.first == t.first)
+						ImGui::PushStyleColor(ImGuiCol_Header, {0.f, 0.5f, 0.5f, 1.f});
+					else
+						ImGui::PushStyleColor(ImGuiCol_Header, {0.f, max(0.f, 0.4f - s.second * 0.1f), 0.f, 1.f});
+					if (ImGui::Selectable(to_string(s.first).c_str(), true))
+						t.first = s.first;
+					if (s.first == t.first)
+						ImGui::SetItemDefaultFocus();
+					ImGui::PopStyleColor();
 				}
+				p = ImGui::GetCursorScreenPos().y;
 				ImGui::EndCombo();
 			}
 
 			ImGui::Text("%d/%d", won[i], lost[i]);
 			ImGui::Text("%d", (won[i] - lost[i]) * 50);
 			ImGui::Text("%d", (suml - lost[i]) * (nplayer == 3? 40: 30));
-			int res = s[0] + (won[i] - lost[i]) * 50 + (suml - lost[i]) * (nplayer == 3? 40: 30);
+			int res = t.first + (won[i] - lost[i]) * 50 + (suml - lost[i]) * (nplayer == 3? 40: 30);
 			if (ImGui::Button((to_string(res) + "##2").c_str(), {ImGui::GetContentRegionAvail().x, 0})) {
 				result = res;
 				list = true;
@@ -534,7 +544,7 @@ void Program::show_results() {
 			ImGui::PopStyleColor(2);
 			ImGui::PopID();
 		}
-		float p = ImGui::GetCursorScreenPos().y;
+		p = max(p, ImGui::GetCursorScreenPos().y);
 
 		for (int r = 1, n = 1; r < l.size(); r++) {
 			int res = 0;
@@ -762,16 +772,16 @@ void Program::process() {
 				if (nplayer == 4 && (i - frow) % nplayer == p)
 					continue;
 				for (const auto& g : points) {
-					int b = dists[l] + g.first - scores[p].length();
-					if (b > best.begin()->first + 2)
+					int d = dists[l] + g.first - scores[p].length();
+					if (d > best.begin()->first + 2)
 						break;
 					int s = abs(lists[l][i].scores[p] + g.second);
 					auto c = caches[p].find(s);
 					if (c == caches[p].end())
 						c = caches[p].insert({s, dist(to_string(s), scores[p])}).first;
-					b += c->second;
-					if (b <= best.begin()->first + 2)
-						best.insert({b, {g.second, p, l}});
+					d += c->second;
+					if (d <= best.begin()->first + 2)
+						best.insert({d, {g.second, p, l}});
 				}
 			}
 
@@ -805,12 +815,12 @@ void Program::process() {
 		quality.resize(lists[0].size(), 0.f);
 		quality.back() = clamp(log(float(lists.size()) / nlists.size()) / log(10.f), 0.f, 1.f) * same;
 		toplist = lists[0];
-		topscores.fill({0});
+		topscores.fill({0, {}});
 		for (int r = 1; r < toplist.size(); r++) {
 			if (toplist[r].player >= 0)
-				topscores[toplist[r].player][0] += toplist[r].points;
+				topscores[toplist[r].player].first += toplist[r].points;
 			for (int p = 0; p < nplayer && toplist[r].points == 0; p++)
-				topscores[p][0] += toplist[r].scores[p] - toplist[r - 1].scores[p];
+				topscores[p].first += toplist[r].scores[p] - toplist[r - 1].scores[p];
 		}
 
 		if (lists.front().back().player == -2)
@@ -844,7 +854,7 @@ void Program::process() {
 					auto b = best.find(s);
 					if (b == best.end()) {
 						int d = dist(to_string(abs(s)), score);
-						b = best.insert({s, {l.second.first + g.second + d, d}}).first;
+						best[s] = {l.second.first + g.second + d, d};
 					} else {
 						b->second.first = min(b->second.first, l.second.first + g.second + b->second.second);
 					}
@@ -856,11 +866,12 @@ void Program::process() {
 			swap(ls, best);
 		}
 
-		set<pair<int, int>> best;
+		multimap<int, int> best;
 		for (const auto& l : ls)
 			best.insert({l.second.first, l.first});
 		lock_guard<std::mutex> lg(mut);
-		for (auto it = best.begin(); it != best.end() && topscores[p].size() < 50; it++)
-			topscores[p].push_back(it->second);
+		topscores[p].second[topscores[p].first] = 0;
+		for (auto it = best.begin(); it != best.end() && (topscores[p].second.size() < 50 || prev(it)->first == it->first); it++)
+			topscores[p].second[it->second] = it->first - best.begin()->first;
 	}
 }

@@ -115,7 +115,7 @@ private:
 	std::atomic<bool> converting;
 	std::mutex mut;
 	List toplist;
-	std::array<std::vector<int>, 4> topscores;
+	std::array<std::pair<int, std::map<int, int>>, 4> topscores;
 	std::vector<float> quality;
 
 	void show_config(float);
