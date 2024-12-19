@@ -817,7 +817,7 @@ void Program::process() {
 
 		lock_guard<std::mutex> lg(mut);
 		quality.resize(lists[0].size(), 0.f);
-		quality.back() = clamp(log(float(lists.size()) / nlists.size()) / log(10.f), 0.f, 1.f) * same;
+		quality.back() = clamp(log(float(lists.size()) / nlists.size()) / log(10.f), 0.01f, 1.f) * same;
 		toplist = lists[0];
 		topscores.fill({0, {}});
 		for (int r = 1; r < toplist.size(); r++) {
