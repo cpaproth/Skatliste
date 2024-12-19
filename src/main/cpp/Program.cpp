@@ -467,7 +467,9 @@ void Program::show_players() {
 }
 
 void Program::show_results() {
+	static float maxsize = 0.f;
 	if (!worker.joinable()) {
+		maxsize = 0.f;
 		toplist.clear();
 		topscores.fill({0, {}});
 		worker = thread(&Program::process, this);
@@ -591,6 +593,8 @@ void Program::show_results() {
 
 			ImGui::PopID();
 		}
+		maxsize = max(maxsize, ImGui::GetCursorPosY());
+		ImGui::Dummy({0.f, maxsize - ImGui::GetCursorPosY()});
 
 		if (ImGui::IsMouseDragging(0) && ImGui::GetMousePos().x < ImGui::GetWindowContentRegionMax().x && min(ImGui::GetMousePos().y, ImGui::GetIO().MouseClickedPos[0].y) > p) {
 			ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
