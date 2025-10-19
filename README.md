@@ -17,6 +17,11 @@ Development of an Android app to capture images of handwritten tournament Skat l
 * Replace the app folder in the new project by the cloned repository
 * Use Anroid Studio to build the project
 
+## Download
+
+Get the latest release here:
+[Skatliste.apk](https://github.com/cpaproth/Skatliste/releases/latest/download/Skatliste.apk)
+
 ## Links
 
 * [Getting started with C++ and Android Native Activities](https://medium.com/androiddevelopers/getting-started-with-c-and-android-native-activities-2213b402ffff)

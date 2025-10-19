@@ -17,7 +17,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
-        tools:targetApi="31">
+        tools:targetApi="24">
         <activity
             android:exported="true"
             android:name="android.app.NativeActivity"
